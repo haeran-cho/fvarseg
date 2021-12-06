@@ -20,7 +20,7 @@ common.seg <- function(x, G.seq, thr.const, tt.by = round(log(dim(x)[2])), q = N
     common.stat.list[[ii]]$thr <- thr
     
     est.cp <- common.search.cp(cts, thr, G, eta)
-    if(do.check) est.cp <- common.check(x, G, est.cp, thr, ll, q, ic.op, norm.type, agg.over.freq)
+    if(do.check) est.cp <- common.check(x, G, est.cp, thr, ll, q, ic.op, norm.type, agg.over.freq, cts$null.norm)
     common.est.cp.list[[ii]] <- est.cp
     # matplot(cts$norm.stat, type = 'l'); abline(v = cp.common, lty = 2, col = 2, lwd = 2); abline(v = cp.idio, lty = 3, col = 6); abline(v = est.cp, col = 4, lty = 3); abline(h = thr, col = 3); lines(cts$stat, col = 4, lwd = 2)
     
@@ -79,38 +79,61 @@ common.two.step <- function(x, G, thr, ll, tt.by, norm.type, agg.over.freq){
     if(agg.over.freq == 'max') stat <- apply(norm.stat, 1, max)
   } 
   
-  ls <- list(norm.stat = norm.stat, stat = stat)
+  ls <- list(norm.stat = norm.stat, stat = stat, null.norm = null.norm)
   return(ls)
   
 }
 
 #' @keywords internal
-common.search.cp <- function(cts, thr, G, eta = .5){
+common.search.cp <- function(cts, thr, G, eta = .5, rule = c('max', 'over')){
   
   n <- length(cts$stat)
   est.cp <- c()
-  new.norm.stat <- cts$norm.stat * (cts$norm.stat > thr)
-  survived <- apply(new.norm.stat > 0, 1, max) == 1
-  new.stat <- cts$stat
+  new.stat <- cts$stat * (cts$stat > thr)
+  survived <- new.stat > 0
   
   while(sum(survived) > 0){
-    agg.stat <- apply(new.norm.stat, 1, max)
-    mv <- max(agg.stat)
-    theta.hat0 <- min(which(agg.stat == mv))
-    lstar <- which.max(new.norm.stat[theta.hat0, ])
-    int <- max(1, theta.hat0 - round(eta * G) + 1):min(theta.hat0 + round(eta * G), n)
-    if(new.norm.stat[theta.hat0, lstar] >= max(new.norm.stat[int, lstar])){
-      theta.hat <- int[1] + which.max(new.stat[int]) - 1
-      est.cp <- c(est.cp, theta.hat)
-    }
+    mv <- max(new.stat)
+    theta.hat <- min(which(new.stat == mv))
+    int <- max(1, theta.hat - round(eta * G) + 1):min(theta.hat + round(eta * G), n)
+    if(rule == 'max') if(new.stat[theta.hat] >= max(new.stat[int])) est.cp <- c(est.cp, theta.hat)
+    if(rule == 'over') if(sum(new.stat[int] < thr) == 0) est.cp <- c(est.cp, theta.hat)
     int <- max(1, theta.hat - G + 1):min(theta.hat + G, n)
     survived[int] <- FALSE
-    new.norm.stat[!survived, ] <- 0
+    new.stat[!survived] <- 0
   }
   
   est.cp
   
 }
+
+#' #' @keywords internal
+#' common.search.cp <- function(cts, thr, G, eta = .5){
+#'   
+#'   n <- length(cts$stat)
+#'   est.cp <- c()
+#'   new.norm.stat <- cts$norm.stat * (cts$norm.stat > thr)
+#'   survived <- apply(new.norm.stat > 0, 1, max) == 1
+#'   new.stat <- cts$stat
+#'   
+#'   while(sum(survived) > 0){
+#'     agg.stat <- apply(new.norm.stat, 1, max)
+#'     mv <- max(agg.stat)
+#'     theta.hat0 <- min(which(agg.stat == mv))
+#'     lstar <- which.max(new.norm.stat[theta.hat0, ])
+#'     int <- max(1, theta.hat0 - round(eta * G) + 1):min(theta.hat0 + round(eta * G), n)
+#'     if(new.norm.stat[theta.hat0, lstar] >= max(new.norm.stat[int, lstar])){
+#'       theta.hat <- int[1] + which.max(new.stat[int]) - 1
+#'       est.cp <- c(est.cp, theta.hat)
+#'     }
+#'     int <- max(1, theta.hat - G + 1):min(theta.hat + G, n)
+#'     survived[int] <- FALSE
+#'     new.norm.stat[!survived, ] <- 0
+#'   }
+#'   
+#'   est.cp
+#'   
+#' }
 
 #' @keywords internal
 common.tt.list <- function(eval, G, thr, tt.seq, tt.by){
@@ -263,7 +286,7 @@ common.spec.est <- function(xx, q = NULL, ic.op = 5, ll){
 }
 
 #' @keywords internal
-common.check <- function(x, G, est.cp, thr, ll, q = NULL, ic.op = 5, norm.type, agg.over.freq){
+common.check <- function(x, G, est.cp, thr, ll, q = NULL, ic.op = 5, norm.type, agg.over.freq, null.norm = NULL){
   
   p <- dim(x)[1]; n <- dim(x)[2]
   mean.x <- apply(x, 1, mean)
@@ -271,12 +294,14 @@ common.check <- function(x, G, est.cp, thr, ll, q = NULL, ic.op = 5, norm.type, 
   
   check <- rep(FALSE, length(est.cp))
   if(length(est.cp) > 0){
-    null1 <- common.spec.est(xx[, 1:G], q, ic.op, ll)$Sigma_c[,, 1:(1 + ll)]
-    null2 <- common.spec.est(xx[, 1:G], q, ic.op, ll)$Sigma_c[,, 1:(1 + ll)]
-    null <- (null1 + null2)/2
-    null.norm <- apply(abs(null), 3, norm, type = norm.type)
-    if(norm.type %in% c('2', 'f')) null.norm <- null.norm / sqrt(p)
-    
+    if(is.null(null.norm)){
+      null1 <- common.spec.est(xx[, 1:G], q, ic.op, ll)$Sigma_c[,, 1:(1 + ll)]
+      null2 <- common.spec.est(xx[, 1:G], q, ic.op, ll)$Sigma_c[,, 1:(1 + ll)]
+      # null <- (null1 + null2)/2
+      null.norm <- apply(cbind(apply(abs(null1), 3, norm, type = norm.type),
+                             apply(abs(null2), 3, norm, type = norm.type)), 1, max)
+      if(norm.type %in% c('2', 'f')) null.norm <- null.norm / sqrt(p)
+    }
     for(ii in 1:length(est.cp)){
       cse1 <- common.spec.est(xx[, max(1, est.cp[ii] - G):est.cp[ii]], q, ic.op, ll)
       cse2 <- common.spec.est(xx[, (est.cp[ii] + 1):min(n, est.cp[ii] + G)], q, ic.op, ll)
