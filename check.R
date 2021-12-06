@@ -16,15 +16,23 @@ cp.idio <- round(n * (1:3)/4)
 x <- sim.data(n = n, p = p, q = q, 
               cp.common = cp.common, den.common = .5, type.common = c('ma', 'ar')[2], ma.order = 2,
               cp.idio = cp.idio, size.idio = 1, burnin = 100, seed = 1511)
-dp <- dyn.pca(x, ic.op = 5)
+dp <- common.spec.est(t(scale(t(x), scale = FALSE)), q = NULL, ic.op = 5, max(1, floor(200^(1/3))))
 dp$hl$q.hat
 dev.off()
 
 ##
 
+thr.const <- .22
+norm.type <- c('m', 'f', '2')[2]
+agg.over.freq <- 'avg'
+tt.by <- ceiling(log(n))
+
 G <- 200
 
-w <- weights.Bartlett(((-ll):ll)/ll)
+ll <- max(1, floor(G^(1/3)))
+thr <- thr.const * p * max(sqrt(ll * log(n)/G), 1/ll, 1/p)
+
+w <- bartlett.weights(((-ll):ll)/ll)
 len <- 2 * ll
 thetas <- 2 * pi * (0:len)/(len + 1)
 
@@ -66,8 +74,8 @@ if(length(tt.list) > 0){
   if(agg.over.freq == 'max') stat <- apply(norm.stat, 1, max)
 } 
 
-est.cp <- common.search.cp(cts, thr, G, eta)
-matplot(cts$norm.stat, type = 'l'); abline(v = cp.common, lty = 2, col = 2, lwd = 2); abline(v = cp.idio, lty = 3, col = 6); abline(v = est.cp, col = 4, lty = 3); abline(h = thr, col = 3); lines(cts$stat, col = 4, lwd = 2)
+est.cp <- common.search.cp(list(norm.stat = norm.stat, stat = stat), thr, G, eta = .5)
+matplot(norm.stat, type = 'l'); abline(v = cp.common, lty = 2, col = 2, lwd = 2); abline(v = cp.idio, lty = 3, col = 6); abline(v = est.cp, col = 4, lty = 3); abline(h = thr, col = 3); lines(stat, col = 4, lwd = 2)
 
 est.cp <- common.check(x, G, est.cp, thr, ll, q, ic.op, norm.type, agg.over.freq)
 
