@@ -12,7 +12,7 @@ cp.idio <- round(n * (1:3)/4)
 cp.idio <- c()
 
 x <- sim.data(n = n, p = p, q = q, 
-              cp.common = cp.common, den.common = .75, type.common = c('ma', 'ar')[2], ma.order = 2,
+              cp.common = cp.common, den.common = 1, type.common = c('ma', 'ar')[2], ma.order = 2,
               cp.idio = cp.idio, size.idio = 1, burnin = 100)
 dp <- common.spec.est(t(scale(t(x), scale = FALSE)), q = NULL, ic.op = 5, max(1, floor(200^(1/3))))
 dp$hl$q.hat
@@ -28,7 +28,7 @@ tt.by <- ceiling(log(n))
 G <- 200
 
 ll <- max(1, floor(G^(1/3)))
-thr <- thr.const * p * max(sqrt(ll * log(n)/G), 1/ll, 1/p)
+thr <- 1.5 # thr.const * p * max(sqrt(ll * log(n)/G), 1/ll, 1/p)
 
 w <- bartlett.weights(((-ll):ll)/ll)
 len <- 2 * ll
@@ -52,33 +52,36 @@ if(norm.type %in% c('f', '2')) null.norm <- null.norm / sqrt(p)
 
 tt.seq <- round(seq(G, n - G, by = tt.by))
 stat0 <- common.stat0(x, G, thr, ll, tt.seq)
+
+null.norm <- stat0[G, ]
+
 norm.stat <- abs(t(t(stat0) / null.norm))
 if(agg.over.freq == 'avg') stat <- apply(norm.stat, 1, mean)
 if(agg.over.freq == 'max') stat <- apply(norm.stat, 1, max)
 
-# matplot(norm.stat, type = 'l'); abline(v = cp.common, lty = 2, col = 2); abline(h = thr, col = 3); lines(stat, col = 4, lwd = 2)
+matplot(tt.seq, norm.stat[tt.seq, ], type = 'l'); abline(v = cp.common, lty = 2, col = 2); abline(h = thr, col = 3); lines(tt.seq, stat[tt.seq], col = 4, lwd = 2)
 
-tt.list <- common.tt.list(norm.stat, G, thr, tt.seq, tt.by)
+tt.list <- common.tt.list(stat, G, thr, tt.seq, tt.by)
 
 if(length(tt.list) > 0){
   for(ii in 1:length(tt.list)){
     s <- min(tt.list[[ii]]); e <- max(tt.list[[ii]])
     stat0 <- common.stat1(x, G, thr, ll, s, e, stat0)
   }
-  norm.stat <- abs(t(t(stat0)/apply(abs(null), 3, norm, type = norm.type)))
+  norm.stat <- abs(t(t(stat0) / null.norm))
   if(norm.type == 'f') norm.stat <- norm.stat * sqrt(p)
   
   if(agg.over.freq == 'avg') stat <- apply(norm.stat, 1, mean)
   if(agg.over.freq == 'max') stat <- apply(norm.stat, 1, max)
 } 
 
-# matplot(norm.stat, type = 'l'); abline(v = cp.common, lty = 2, col = 2); abline(h = thr, col = 3); lines(stat, col = 4, lwd = 2)
+matplot(norm.stat, type = 'l'); abline(v = cp.common, lty = 2, col = 2); abline(h = thr, col = 3); lines(stat, col = 4, lwd = 2)
 
-cts <- list(norm.stat = norm.stat, stat = stat, null.stat = null.stat)
-est.cp <- common.search.cp(cts, thr, G, eta = .05, rule = c('max', 'over')[2])
+cts <- list(norm.stat = norm.stat, stat = stat, null.norm = null.norm)
+est.cp <- common.search.cp(cts, thr, G, eta = .5, rule = c('max', 'over')[1])
 est.cp
 
-common.check(x, G, est.cp, thr, ll, NULL, ic.op = 5, norm.type, agg.over.freq, cts$null.stat)
+common.check(x, G, est.cp, thr, ll, NULL, ic.op = 5, norm.type, agg.over.freq, cts$null.norm)
 
 ##
 
@@ -112,7 +115,7 @@ while(vv <= n - G){
   for(kk in 1:(K + 1)) acv <- acv - tb[kk] / G * Gamma_c[,,, kk]
   mg <- make.gg(acv, d)
   beta <- idio.beta(mg$GG, mg$gg, icv$lambda)$beta
-  mean(beta != 0); fields::imagePlot(beta, col = RColorBrewer::brewer.pal(11, 'RdBu'))
+  mean(beta != 0); fields::imagePlot(beta, col = RColorBrewer::brewer.pal(11, 'RdBu'), breaks = seq(-max(abs(beta)), max(abs(beta)), length.out = 12))
   
   # null.norm <- max(abs(acv[,, 1]))
   # norm(acv[,, 1], 'f')/sqrt(p)

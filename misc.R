@@ -81,7 +81,7 @@ sim.data <- function(n, p, q,
 }
 
 #' @keywords internal
-bartlett.weights <- function(x) 1 - abs(x)
+bartlett.weights <- function(z) 1 - abs(z)
 
 #' @keywords internal 
 acv.x <- function(xx, ll, w = NULL){
@@ -197,30 +197,28 @@ factor.number.est <- function(xx, q.max, ll, w){
 #' @keywords internal
 bottom.up <- function(est.cp.list, G.seq, eta){
   
-  est.cp <- c()
+  est.cp <- matrix(NA, nrow = 0, ncol = 2)
+  dimnames(est.cp)[[2]] <- c('cp', 'G')
+  
   if(length(est.cp.list) > 0){
-    
-    Gs.giving.cp <- which(unlist(lapply(est.cp, length))>0)
-    
-    if(length(Gs.giving.cp)==0){
-      est.cp.com <- c()
-    }else{
-      first.G.giving.cp <- Gs.giving.cp[1]
-      est.cp.com <- c(est.cp[[first.G.giving.cp]])
-      if(length(Gs.giving.cp)>1){
-        
-        for(i in Gs.giving.cp[-1]){
-          cp.idx <- rep(NA, length(est.cp[[i]]))
-          for(j in 1:length(cp.idx)){
-            cp.idx[j] <- ifelse( min(abs(est.cp[[i]][j] - est.cp.com)) <= round(G.seq[i]* eta), FALSE, TRUE)
+    while(length(G.seq) > 0){
+      kk <- which.min(G.seq)
+      cand.cp <- est.cp.list[[kk]]
+      if(length(cand.cp) > 0){
+        if(dim(est.cp)[1] == 0){
+          est.cp <- rbind(est.cp, cbind(cand.cp, G.seq[kk]))
+        } else{
+          for(ii in 1:length(cand.cp)){
+            if(min(abs(cand.cp[ii] - est.cp[, 1])) > G.seq[kk] * eta) est.cp <- 
+                rbind(est.cp, c(cand.cp[ii], G.seq[kk]))
           }
-          est.cp.com <- c(est.cp.com, est.cp[[i]][cp.idx])
         }
       }
+      G.seq <- setdiff(G.seq, kk)
     }
   }
-  
-  return(est.cp.com)
+
+  return(est.cp)
 }
 
 #' @keywords internal

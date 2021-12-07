@@ -2,12 +2,9 @@ library(lpSolve)
 library(foreach)
 library(doParallel)
 
-
-
-
 ## idio
 # if est.cp.common = c() and q = 0, it becomes var segmentation
-idio.seg <- function(x, G.seq, d = 1, thr.const,
+idio.seg <- function(x, G.seq, d = 1, thr.const, demean = TRUE,
                      est.cp.common = c(), q = NULL, ic.op = 5,
                      path.length = 10, n.folds = 1){
   
@@ -18,7 +15,7 @@ idio.seg <- function(x, G.seq, d = 1, thr.const,
   brks <- c(0, est.cp.common, n)
   idx <- rep(c(1:(length(brks) - 1)), diff(brks))
   
-  mean.x <- apply(x, 1, mean)
+  if(demean) mean.x <- apply(x, 1, mean) else mean.x <- rep(0, p)
   xx <- x - mean.x
   
   ll <- max(1, floor(min(G.seq)^(1/3)))
@@ -107,7 +104,7 @@ idio.seg <- function(x, G.seq, d = 1, thr.const,
     
   }
   
-  ls <- list(est.cp.list = idio.est.cp.list, stat.list = idio.stat.list)
+  ls <- list(est.cp.list = idio.est.cp.list, stat.list = idio.stat.list, mean.x = mean.x)
   return(ls)
   
 }
@@ -142,14 +139,14 @@ idio.beta <- function(GG, gg, lambda, n.cores = min(parallel::detectCores() - 1,
 }
 
 #' @keywords internal
-idio.cv <- function(zz, Gamma_c, idx, lambda.max = NULL, var.order = 1, 
+idio.cv <- function(xx, Gamma_c, idx, lambda.max = NULL, var.order = 1, 
                     path.length = 10, n.folds = 1){
   
-  nn <- ncol(zz)
-  p <- nrow(zz)
+  nn <- ncol(xx)
+  p <- nrow(xx)
   ll <- dim(Gamma_c)[3] - 1
   
-  if(is.null(lambda.max)) lambda.max <- max(abs(zz %*% t(zz)/nn)) * 1
+  if(is.null(lambda.max)) lambda.max <- max(abs(xx %*% t(xx)/nn)) * 1
   lambda.path <- round(exp(seq(log(lambda.max), log(lambda.max * .005), length.out = path.length)), digits = 10)
   
   cv.err.mat <- matrix(0, nrow = path.length, ncol = length(var.order))
@@ -157,14 +154,14 @@ idio.cv <- function(zz, Gamma_c, idx, lambda.max = NULL, var.order = 1,
   
   for(fold in 1:n.folds){ 
     ind <- 1:ceiling(length(ind.list[[fold]]) * .5)
-    tx <- zz[, ind.list[[fold]][ind]]
+    tx <- xx[, ind.list[[fold]][ind]]
     tb <- table(idx[ind])
     tb.idx <- as.numeric(names(tb))
     train.acv <- acv.x(tx, ll)$Gamma_x[,, 1:(ll + 1)]
     for(ii in tb.idx) train.acv <- train.acv - tb[ii]/length(ind) * Gamma_c[,,, ii]
     
     ind <- setdiff(ind.list[[fold]], ind)
-    tx <- zz[, ind.list[[fold]][ind]]
+    tx <- xx[, ind.list[[fold]][ind]]
     tb <- table(idx[ind])
     tb.idx <- as.numeric(names(tb))
     test.acv <- acv.x(tx, ll)$Gamma_x[,, 1:(ll + 1)]
