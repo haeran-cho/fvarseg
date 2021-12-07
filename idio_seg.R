@@ -21,7 +21,7 @@ idio.seg <- function(x, G.seq, d = 1, thr.const, demean = TRUE,
   ll <- max(1, floor(min(G.seq)^(1/3)))
   
   pcfa <- post.cp.factor.analysis(xx, est.cp.common, q, ic.op, ll)
-  Gamma_c <- pcfa$Gamma_c[,, 1:(ll + 1), ]
+  Gamma_c <- pcfa$Gamma_c[,, 1:(ll + 1),, drop = FALSE]
 
   idio.est.cp.list <- list()
   idio.stat.list <- list()
@@ -37,17 +37,17 @@ idio.seg <- function(x, G.seq, d = 1, thr.const, demean = TRUE,
     while(vv <= n - G){
       
       int <- (vv - G + 1):vv
-      icv <- idio.cv(zz = xx[, int, drop = FALSE], Gamma_c = Gamma_c, idx = idx, var.order = d, 
+      icv <- idio.cv(xx = xx[, int, drop = FALSE], Gamma_c = Gamma_c, idx = idx, var.order = d, 
                      path.length = path.length, n.folds = n.folds)  
       tb <- tabulate(idx[int], nbins = K + 1)
-      acv <- acv.x(xx[, int, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1)]
+      acv <- acv.x(xx[, int, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE]
       for(kk in 1:(K + 1)) acv <- acv - tb[kk] / G * Gamma_c[,,, kk]
       mg <- make.gg(acv, d)
       beta <- idio.beta(mg$GG, mg$gg, icv$lambda)$beta
       # mean(beta != 0); fields::imagePlot(beta, col = RColorBrewer::brewer.pal(11, 'RdBu'), breaks = seq(-max(abs(beta)), max(abs(beta)), length.out = 12))
       
-      diff.Gamma_x <- acv.x(xx[, int, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1)] -
-        acv.x(xx[, int + G, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1)]
+      diff.Gamma_x <- acv.x(xx[, int, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE] - 
+        acv.x(xx[, int + G, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE]
       diff.Gamma_c <- diff.Gamma_x * 0
       if(K > 0){
         common.weights <- tabulate(idx[int], nbins = K + 1) - 
@@ -87,9 +87,8 @@ idio.seg <- function(x, G.seq, d = 1, thr.const, demean = TRUE,
           first <- FALSE
         }
         tt <- tt + 1
-        
       }  
-      # ts.plot(stat); abline(h = thr, col = 3); abline(v = cp.idio, col = 2, lty = 3)
+      # ts.plot(stat); abline(h = thr, col = 3); abline(v = check.cp, col = 6); abline(v = cp.idio, col = 2, lty = 3)
       
       if(check.theta < tt.max){
         hat.theta <- (check.theta:tt.max)[which.max(stat[check.theta:tt.max])]
@@ -104,8 +103,10 @@ idio.seg <- function(x, G.seq, d = 1, thr.const, demean = TRUE,
     
   }
   
-  ls <- list(est.cp.list = idio.est.cp.list, stat.list = idio.stat.list, mean.x = mean.x)
-  return(ls)
+  est.cp <- bottom.up(est.cp.list, G.seq, eta)
+  
+  out <- list(est.cp = est.cp, est.cp.list = idio.est.cp.list, stat.list = idio.stat.list, mean.x = mean.x)
+  return(out)
   
 }
 
@@ -157,14 +158,14 @@ idio.cv <- function(xx, Gamma_c, idx, lambda.max = NULL, var.order = 1,
     tx <- xx[, ind.list[[fold]][ind]]
     tb <- table(idx[ind])
     tb.idx <- as.numeric(names(tb))
-    train.acv <- acv.x(tx, ll)$Gamma_x[,, 1:(ll + 1)]
+    train.acv <- acv.x(tx, ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE]
     for(ii in tb.idx) train.acv <- train.acv - tb[ii]/length(ind) * Gamma_c[,,, ii]
     
     ind <- setdiff(ind.list[[fold]], ind)
     tx <- xx[, ind.list[[fold]][ind]]
     tb <- table(idx[ind])
     tb.idx <- as.numeric(names(tb))
-    test.acv <- acv.x(tx, ll)$Gamma_x[,, 1:(ll + 1)]
+    test.acv <- acv.x(tx, ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE]
     for(ii in tb.idx) test.acv <- test.acv - tb[ii]/length(ind) * Gamma_c[,,, ii]
     
     for(jj in 1:length(var.order)){

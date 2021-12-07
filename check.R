@@ -18,7 +18,139 @@ dp <- common.spec.est(t(scale(t(x), scale = FALSE)), q = NULL, ic.op = 5, max(1,
 dp$hl$q.hat
 dev.off()
 
+G.seq <- c(200, 300, 400)
+
+p <- dim(x)[1]
+n <- dim(x)[2]
+
+mean.x <- apply(x, 1, mean)
+xx <- x - mean.x
+
 ##
+
+common.est.cp.list <- list()
+common.stat.list <- list()
+
+for(ii in 1:length(G.seq)){
+  G <- G.seq[ii]
+  ll <- max(1, floor(G^(1/3)))
+  thr <- thr.const * p * max(sqrt(ll * log(n)/G), 1/ll, 1/p)
+  
+  common.stat.list[[ii]] <- cts <- common.two.step(xx, G, thr = 1.5, ll, ceiling(log(n)), 'm', 'avg')
+  common.stat.list[[ii]]$G <- G
+  common.stat.list[[ii]]$ll <- ll
+  common.stat.list[[ii]]$thr <- thr
+  dev.off()
+  
+  est.cp <- common.search.cp(cts, thr = 1.5, G, .5, 'max')
+  est.cp <- common.check(xx, G, est.cp, 1.5, ll, NULL, 5, 'm', 'avg')
+  common.est.cp.list[[ii]] <- est.cp
+  
+  matplot(cts$norm.stat, type = 'l'); abline(v = cp.common, lty = 2, col = 2, lwd = 2); abline(v = cp.idio, lty = 3, col = 6); abline(v = est.cp, col = 4, lty = 3); abline(h = thr, col = 3); lines(cts$stat, col = 4, lwd = 2)
+  
+}
+
+est.cp <- bottom.up(common.est.cp.list, G.seq, .5)
+
+##
+
+est.cp.common <- est.cp[, 1]
+
+K <- length(est.cp.common)
+if(K > 0) est.cp.common <- sort(est.cp.common)
+brks <- c(0, est.cp.common, n)
+idx <- rep(c(1:(length(brks) - 1)), diff(brks))
+
+ll <- max(1, floor(min(G.seq)^(1/3)))
+
+pcfa <- post.cp.factor.analysis(xx, est.cp.common, NULL, 5, ll)
+Gamma_c <- pcfa$Gamma_c[,, 1:(ll + 1),, drop = FALSE]
+
+idio.est.cp.list <- list()
+idio.stat.list <- list()
+
+for(ii in 1:length(G.seq)){
+  
+  G <- G.seq[ii]
+  thr <- 1.5 # thr.const * max(sqrt(ll * log(n * p) / G), 1/ll, 1/sqrt(p))
+  vv <- G
+  stat <- rep(0, n)
+  check.cp <- est.cp <- c()
+  
+  while(vv <= n - G){
+    
+    int <- (vv - G + 1):vv
+    icv <- idio.cv(xx = xx[, int, drop = FALSE], Gamma_c = Gamma_c, idx = idx, var.order = d, 
+                   path.length = 10, n.folds = 1)  
+    tb <- tabulate(idx[int], nbins = K + 1)
+    acv <- acv.x(xx[, int, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE]
+    for(kk in 1:(K + 1)) acv <- acv - tb[kk] / G * Gamma_c[,,, kk]
+    mg <- make.gg(acv, d)
+    beta <- idio.beta(mg$GG, mg$gg, icv$lambda)$beta
+    mean(beta != 0); image(beta, col = RColorBrewer::brewer.pal(11, 'RdBu'), breaks = seq(-max(abs(beta)), max(abs(beta)), length.out = 12))
+    
+    diff.Gamma_x <- acv.x(xx[, int, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE] -
+      acv.x(xx[, int + G, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE]
+    diff.Gamma_c <- diff.Gamma_x * 0
+    if(K > 0){
+      common.weights <- tabulate(idx[int], nbins = K + 1) - 
+        tabulate(idx[int + G], nbins = K + 1)
+      for(kk in 1:(K + 1)) diff.Gamma_c <- diff.Gamma_c + 
+          common.weights[kk] / G * Gamma_c[,,, kk]
+    }
+    
+    mg <- make.gg(diff.Gamma_x - diff.Gamma_c, d)
+    null.norm <- max(abs(mg$GG %*% beta - mg$gg))
+    stat[vv] <- 1
+    
+    first <- TRUE
+    tt <- vv + 1
+    check.theta <- tt.max <- n - G
+    while(tt <= tt.max){
+      for(h in 0:ll){
+        diff.Gamma_x[,, h + 1] <- diff.Gamma_x[,, h + 1] -
+          xx[, tt - G, drop = FALSE] %*% t(xx[, tt - G + h, drop = FALSE]) / G +
+          xx[, tt - h, drop = FALSE] %*% t(xx[, tt, drop = FALSE]) / G +
+          xx[, tt, drop = FALSE] %*% t(xx[, tt + h, drop = FALSE]) / G -
+          xx[, tt + G - h, drop = FALSE] %*% t(xx[, tt + G, drop = FALSE]) / G
+      }
+      diff.Gamma_c <- diff.Gamma_x * 0
+      if(K > 0){
+        common.weights <- tabulate(idx[(tt - G + 1):tt], nbins = K + 1) -
+          tabulate(idx[(tt + 1):(tt + G)], nbins = K + 1)
+        for(kk in 1:(K + 1)) diff.Gamma_c <- diff.Gamma_c + common.weights[kk] / G * Gamma_c[,,, kk]
+      }
+      mg <- make.gg(diff.Gamma_x - diff.Gamma_c, d)
+      stat[tt] <- max(abs(mg$GG %*% beta - mg$gg)) / null.norm
+      
+      if(first & stat[tt] > thr){
+        check.theta <- tt
+        tt.max <- min(tt.max, check.theta + G - 1)
+        check.cp <- c(check.cp, check.theta)
+        first <- FALSE
+      }
+      tt <- tt + 1
+    }  
+    ts.plot(stat); abline(h = thr, col = 3); abline(v = check.cp, col = 6); abline(v = cp.idio, col = 2, lty = 3)
+    
+    if(check.theta < tt.max){
+      hat.theta <- (check.theta:tt.max)[which.max(stat[check.theta:tt.max])]
+      est.cp <- c(est.cp, hat.theta)
+      vv <- hat.theta + G
+      
+      abline(v = hat.theta, col = 4, lty = 2)
+    } else break
+    
+  }
+  
+  idio.est.cp.list[[ii]] <- est.cp
+  idio.stat.list[[ii]] <- list(stat = stat, G = G, thr = thr, check.cp = check.cp)
+  
+}
+
+bottom.up(idio.est.cp.list, G.seq, .5)
+
+################
 
 thr.const <- .22
 norm.type <- c('m', 'f', '2')[1]
@@ -108,7 +240,7 @@ check.cp <- est.cp <- c()
 while(vv <= n - G){
   
   int <- (vv - G + 1):vv
-  icv <- idio.cv(zz = xx[, int, drop = FALSE], Gamma_c = Gamma_c, idx = idx, var.order = d, 
+  icv <- idio.cv(xx = xx[, int, drop = FALSE], Gamma_c = Gamma_c, idx = idx, var.order = d, 
                  path.length = 10, n.folds = 1)  
   tb <- tabulate(idx[int], nbins = K + 1)
   acv <- acv.x(xx[, int, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1)]

@@ -214,7 +214,7 @@ bottom.up <- function(est.cp.list, G.seq, eta){
           }
         }
       }
-      G.seq <- setdiff(G.seq, kk)
+      G.seq <- setdiff(G.seq, G.seq[kk])
     }
   }
 

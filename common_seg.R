@@ -24,13 +24,15 @@ common.seg <- function(x, G.seq, thr.const, tt.by = round(log(dim(x)[2])), q = N
     common.stat.list[[ii]]$thr <- thr
     
     est.cp <- common.search.cp(cts, thr, G, eta)
-    if(do.check) est.cp <- common.check(xx, G, est.cp, thr, ll, q, ic.op, norm.type, agg.over.freq, cts$null.norm)
+    if(do.check) est.cp <- common.check(xx, G, est.cp, thr, ll, q, ic.op, norm.type, agg.over.freq)
     common.est.cp.list[[ii]] <- est.cp
     # matplot(cts$norm.stat, type = 'l'); abline(v = cp.common, lty = 2, col = 2, lwd = 2); abline(v = cp.idio, lty = 3, col = 6); abline(v = est.cp, col = 4, lty = 3); abline(h = thr, col = 3); lines(cts$stat, col = 4, lwd = 2)
     
   }
   
-  out <- list(est.cp.list  = common.est.cp.list, stat.list = common.stat.list, mean.x = mean.x)
+  est.cp <- bottom.up(est.cp.list, G.seq, eta)
+  
+  out <- list(est.cp = est.cp, est.cp.list  = common.est.cp.list, stat.list = common.stat.list, mean.x = mean.x)
   return(out)
   
 }
@@ -92,7 +94,7 @@ common.two.step <- function(xx, G, thr, ll, tt.by, norm.type, agg.over.freq){
 }
 
 #' @keywords internal
-common.search.cp <- function(cts, thr, G, eta = .5, rule = c('max', 'over')){
+common.search.cp <- function(cts, thr, G, eta = .5, rule = c('max', 'over')[1]){
   
   n <- length(cts$stat)
   est.cp <- c()
