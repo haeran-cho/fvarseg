@@ -25,9 +25,7 @@ idio.seg <- function(x, G.seq, d = 1, thr.const,
   
   pcfa <- post.cp.factor.analysis(xx, est.cp.common, q, ic.op, ll)
   Gamma_c <- pcfa$Gamma_c[,, 1:(ll + 1), ]
-  ## QQ
-  # if(sum(pcfa$q.seq) == 0) if there's no factor can use smaller threshold?
-    
+
   idio.est.cp.list <- list()
   idio.stat.list <- list()
   
@@ -49,7 +47,7 @@ idio.seg <- function(x, G.seq, d = 1, thr.const,
       for(kk in 1:(K + 1)) acv <- acv - tb[kk] / G * Gamma_c[,,, kk]
       mg <- make.gg(acv, d)
       beta <- idio.beta(mg$GG, mg$gg, icv$lambda)$beta
-      # mean(beta != 0); image(beta)
+      # mean(beta != 0); fields::imagePlot(beta, col = RColorBrewer::brewer.pal(11, 'RdBu'), breaks = seq(-max(abs(beta)), max(abs(beta)), length.out = 12))
       
       diff.Gamma_x <- acv.x(xx[, int, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1)] -
         acv.x(xx[, int + G, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1)]
@@ -61,42 +59,47 @@ idio.seg <- function(x, G.seq, d = 1, thr.const,
             common.weights[kk] / G * Gamma_c[,,, kk]
       }
       
-      tt <- vv
-      check.theta <- tt.max <- n - G - 1
+      mg <- make.gg(diff.Gamma_x - diff.Gamma_c, d)
+      null.norm <- max(abs(mg$GG %*% beta - mg$gg))
+      stat[vv] <- 1
+      
+      first <- TRUE
+      tt <- vv + 1
+      check.theta <- tt.max <- n - G
       while(tt <= tt.max){
-        mg <- make.gg(diff.Gamma_x - diff.Gamma_c, d)
-        stat[tt] <- max(abs(mg$GG %*% beta - mg$gg))
-        
-        if(stat[tt] > thr){
-          check.theta <- tt; tt.max <- min(tt.max, check.theta + G - 1)
-          check.cp <- c(check.cp, check.theta)
-        }
-          
-        tt <- tt + 1
-        
         for(h in 0:ll){
-          diff.Gamma_x[,, h + 1] <- diff.Gamma_x[,, h + 1] * G -
-            xx[, tt - G, drop = FALSE] %*% t(xx[, tt - G + h, drop = FALSE]) +
-            xx[, tt - h, drop = FALSE] %*% t(xx[, tt, drop = FALSE]) +
-            xx[, tt, drop = FALSE] %*% t(xx[, tt + h, drop = FALSE]) -
-            xx[, tt + G - h, drop = FALSE] %*% t(xx[, tt + G, drop = FALSE])
+          diff.Gamma_x[,, h + 1] <- diff.Gamma_x[,, h + 1] -
+            xx[, tt - G, drop = FALSE] %*% t(xx[, tt - G + h, drop = FALSE]) / G +
+            xx[, tt - h, drop = FALSE] %*% t(xx[, tt, drop = FALSE]) / G +
+            xx[, tt, drop = FALSE] %*% t(xx[, tt + h, drop = FALSE]) / G -
+            xx[, tt + G - h, drop = FALSE] %*% t(xx[, tt + G, drop = FALSE]) / G
         }
-        diff.Gamma_x <- diff.Gamma_x / G
         diff.Gamma_c <- diff.Gamma_x * 0
         if(K > 0){
-          common.weights <- tabulate(idx[(tt - G + 1):tt], nbins = K + 1) - 
+          common.weights <- tabulate(idx[(tt - G + 1):tt], nbins = K + 1) -
             tabulate(idx[(tt + 1):(tt + G)], nbins = K + 1)
           for(kk in 1:(K + 1)) diff.Gamma_c <- diff.Gamma_c + common.weights[kk] / G * Gamma_c[,,, kk]
         }
+        mg <- make.gg(diff.Gamma_x - diff.Gamma_c, d)
+        stat[tt] <- max(abs(mg$GG %*% beta - mg$gg)) / null.norm
+        
+        if(first & stat[tt] > thr){
+          check.theta <- tt
+          tt.max <- min(tt.max, check.theta + G - 1)
+          check.cp <- c(check.cp, check.theta)
+          first <- FALSE
+        }
+        tt <- tt + 1
+        
       }  
+      # ts.plot(stat); abline(h = thr, col = 3); abline(v = cp.idio, col = 2, lty = 3)
       
-      ts.plot(stat); abline(h = thr, col = 3); abline(v = cp.idio, col = 2, lty = 3)
-
-      # do something with stat
+      if(check.theta < tt.max){
+        hat.theta <- (check.theta:tt.max)[which.max(stat[check.theta:tt.max])]
+        est.cp <- c(est.cp, hat.theta)
+        vv <- hat.theta + G
+      } else break
       
-      hat.theta <- (check.theta:tt.max)[which.max(stat[check.theta:tt.max])]
-      est.cp <- c(est.cp, hat.theta)
-      vv <- hat.theta + G
     }
     
     idio.est.cp.list[[ii]] <- est.cp
@@ -147,7 +150,7 @@ idio.cv <- function(zz, Gamma_c, idx, lambda.max = NULL, var.order = 1,
   ll <- dim(Gamma_c)[3] - 1
   
   if(is.null(lambda.max)) lambda.max <- max(abs(zz %*% t(zz)/nn)) * 1
-  lambda.path <- round(exp(seq(log(lambda.max), log(lambda.max * .001), length.out = path.length)), digits = 10)
+  lambda.path <- round(exp(seq(log(lambda.max), log(lambda.max * .005), length.out = path.length)), digits = 10)
   
   cv.err.mat <- matrix(0, nrow = path.length, ncol = length(var.order))
   ind.list <- split(1:nn, ceiling(n.folds*(1:nn)/nn)) 

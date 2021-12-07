@@ -6,11 +6,14 @@ q <- 3
 tc <- 2.5
 
 cp.common <- round(n * c(1/3, 2/3))
+cp.common <- c()
+
 cp.idio <- round(n * (1:3)/4)
+cp.idio <- c()
 
 x <- sim.data(n = n, p = p, q = q, 
               cp.common = cp.common, den.common = .75, type.common = c('ma', 'ar')[2], ma.order = 2,
-              cp.idio = cp.idio, size.idio = 1, burnin = 100, seed = 12334)
+              cp.idio = cp.idio, size.idio = 1, burnin = 100)
 dp <- common.spec.est(t(scale(t(x), scale = FALSE)), q = NULL, ic.op = 5, max(1, floor(200^(1/3))))
 dp$hl$q.hat
 dev.off()
@@ -81,6 +84,7 @@ common.check(x, G, est.cp, thr, ll, NULL, ic.op = 5, norm.type, agg.over.freq, c
 
 est.cp.common <- cp.common
 
+d <- 1
 K <- length(est.cp.common)
 brks <- c(0, est.cp.common, n)
 idx <- rep(c(1:(length(brks) - 1)), diff(brks))
@@ -89,10 +93,11 @@ mean.x <- apply(x, 1, mean)
 xx <- x - mean.x
 ll <- max(1, floor(min(G.seq)^(1/3)))
 
-pcfa <- post.cp.factor.analysis(xx, est.cp.common, q, ic.op, ll)
-Gamma_c <- pcfa$Gamma_c[,, 1:(ll + 1), ]
+pcfa <- post.cp.factor.analysis(xx, est.cp.common, q = NULL, ic.op = 5, ll = ll)
+pcfa$q.seq
+Gamma_c <- pcfa$Gamma_c[,, 1:(ll + 1),, drop = FALSE]
 
-thr <- thr.const * max(sqrt(ll * log(n * p) / G), 1/ll, 1/sqrt(p))
+thr <- 1.5 # 2.2 * max(sqrt(ll * log(n * p) / G), 1/ll, 1/sqrt(p))
 vv <- G
 stat <- rep(0, n)
 check.cp <- est.cp <- c()
@@ -101,13 +106,17 @@ while(vv <= n - G){
   
   int <- (vv - G + 1):vv
   icv <- idio.cv(zz = xx[, int, drop = FALSE], Gamma_c = Gamma_c, idx = idx, var.order = d, 
-                 path.length = path.length, n.folds = n.folds)  
+                 path.length = 10, n.folds = 1)  
   tb <- tabulate(idx[int], nbins = K + 1)
   acv <- acv.x(xx[, int, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1)]
   for(kk in 1:(K + 1)) acv <- acv - tb[kk] / G * Gamma_c[,,, kk]
   mg <- make.gg(acv, d)
   beta <- idio.beta(mg$GG, mg$gg, icv$lambda)$beta
-  # mean(beta != 0); image(beta)
+  mean(beta != 0); fields::imagePlot(beta, col = RColorBrewer::brewer.pal(11, 'RdBu'))
+  
+  # null.norm <- max(abs(acv[,, 1]))
+  # norm(acv[,, 1], 'f')/sqrt(p)
+  # norm(acv[,, 1], 'm')
   
   diff.Gamma_x <- acv.x(xx[, int, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1)] -
     acv.x(xx[, int + G, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1)]
@@ -119,41 +128,46 @@ while(vv <= n - G){
         common.weights[kk] / G * Gamma_c[,,, kk]
   }
   
-  tt <- vv
-  check.theta <- tt.max <- n - G - 1
+  mg <- make.gg(diff.Gamma_x - diff.Gamma_c, d)
+  null.norm <- max(abs(mg$GG %*% beta - mg$gg))
+  stat[vv] <- 1
+  
+  first <- TRUE
+  tt <- vv + 1
+  check.theta <- tt.max <- n - G
   while(tt <= tt.max){
-    mg <- make.gg(diff.Gamma_x - diff.Gamma_c, d)
-    stat[tt] <- max(abs(mg$GG %*% beta - mg$gg))
-    
-    if(stat[tt] > thr){
-      check.theta <- tt; tt.max <- min(tt.max, check.theta + G - 1)
-      check.cp <- c(check.cp, check.theta)
-    }
-    
-    tt <- tt + 1
-    
     for(h in 0:ll){
-      diff.Gamma_x[,, h + 1] <- diff.Gamma_x[,, h + 1] * G -
-        xx[, tt - G, drop = FALSE] %*% t(xx[, tt - G + h, drop = FALSE]) +
-        xx[, tt - h, drop = FALSE] %*% t(xx[, tt, drop = FALSE]) +
-        xx[, tt, drop = FALSE] %*% t(xx[, tt + h, drop = FALSE]) -
-        xx[, tt + G - h, drop = FALSE] %*% t(xx[, tt + G, drop = FALSE])
+      diff.Gamma_x[,, h + 1] <- diff.Gamma_x[,, h + 1] -
+        xx[, tt - G, drop = FALSE] %*% t(xx[, tt - G + h, drop = FALSE]) / G +
+        xx[, tt - h, drop = FALSE] %*% t(xx[, tt, drop = FALSE]) / G +
+        xx[, tt, drop = FALSE] %*% t(xx[, tt + h, drop = FALSE]) / G -
+        xx[, tt + G - h, drop = FALSE] %*% t(xx[, tt + G, drop = FALSE]) / G
     }
-    diff.Gamma_x <- diff.Gamma_x / G
     diff.Gamma_c <- diff.Gamma_x * 0
     if(K > 0){
-      common.weights <- tabulate(idx[(tt - G + 1):tt], nbins = K + 1) - 
+      common.weights <- tabulate(idx[(tt - G + 1):tt], nbins = K + 1) -
         tabulate(idx[(tt + 1):(tt + G)], nbins = K + 1)
       for(kk in 1:(K + 1)) diff.Gamma_c <- diff.Gamma_c + common.weights[kk] / G * Gamma_c[,,, kk]
     }
+    mg <- make.gg(diff.Gamma_x - diff.Gamma_c, d)
+    stat[tt] <- max(abs(mg$GG %*% beta - mg$gg)) / null.norm
+    
+    if(first & stat[tt] > thr){
+      check.theta <- tt
+      tt.max <- min(tt.max, check.theta + G - 1)
+      check.cp <- c(check.cp, check.theta)
+      first <- FALSE
+    }
+    tt <- tt + 1
+    
   }  
   
   ts.plot(stat); abline(h = thr, col = 3); abline(v = cp.idio, col = 2, lty = 3)
   
-  # do something with stat
-  
-  hat.theta <- (check.theta:tt.max)[which.max(stat[check.theta:tt.max])]
-  est.cp <- c(est.cp, hat.theta)
-  vv <- hat.theta + G
+  if(check.theta < tt.max){
+    hat.theta <- (check.theta:tt.max)[which.max(stat[check.theta:tt.max])]
+    est.cp <- c(est.cp, hat.theta)
+    vv <- hat.theta + G
+  } else break
   
 }
