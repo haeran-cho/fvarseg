@@ -75,18 +75,19 @@ common.two.step <- function(xx, G, thr, ll, tt.by, norm.type, agg.over.freq){
   # matplot(tt.seq, norm.stat[tt.seq, ], type = 'l'); abline(v = cp.common, lty = 2, col = 2); abline(h = thr, col = 3); lines(tt.seq, stat[tt.seq], col = 4, lwd = 2)
   
   # tt.list <- common.tt.list(norm.stat, G, thr, tt.seq, tt.by)
-  tt.list <- common.tt.list(stat, G, thr, tt.seq, tt.by)
-  
-  if(length(tt.list) > 0){
-    for(ii in 1:length(tt.list)){
-      s <- min(tt.list[[ii]]); e <- max(tt.list[[ii]])
-      stat0 <- common.stat.seq(xx, G, ll, s, e, stat0)
-    }
-    norm.stat <- abs(t(t(stat0) / null.norm))
+  if(tt.by > 1){
+    tt.list <- common.tt.list(stat, G, thr, tt.seq, tt.by)
+    if(length(tt.list) > 0){
+      for(ii in 1:length(tt.list)){
+        s <- min(tt.list[[ii]]); e <- max(tt.list[[ii]])
+        stat0 <- common.stat.seq(xx, G, ll, s, e, stat0)
+      }
+      norm.stat <- abs(t(t(stat0) / null.norm))
 
-    if(agg.over.freq == 'avg') stat <- apply(norm.stat, 1, mean)
-    if(agg.over.freq == 'max') stat <- apply(norm.stat, 1, max)
-  } 
+      if(agg.over.freq == 'avg') stat <- apply(norm.stat, 1, mean)
+      if(agg.over.freq == 'max') stat <- apply(norm.stat, 1, max)
+    } 
+  }
   
   ls <- list(norm.stat = norm.stat, stat = stat, null.norm = null.norm)
   return(ls)

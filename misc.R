@@ -74,9 +74,13 @@ sim.data <- function(n, p, q,
   }
   x <- xi <- xi[, -(1:burnin)]
   
-  if(q > 0) x <- x + chi/apply(chi, 1, sd) * apply(xi, 1, sd) 
+  if(q > 0){
+    chi/apply(chi, 1, sd) * apply(xi, 1, sd) 
+    x <- x + chi
+  }
   
-  return(x)
+  out <- list(x = x, xi = xi)
+  return(out)
   
 }
 
