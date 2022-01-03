@@ -1,5 +1,3 @@
-## common
-
 common.seg <- function(x, G.seq, thr.const, tt.by = round(log(dim(x)[2])), q = NULL, ic.op = 5, demean = TRUE,
                        norm.type = c('f', '2', 'm'), ## possibly redundant if we're to do self-normalisation
                        agg.over.freq = c('avg', 'max'), eta = .5, do.check = FALSE){
@@ -272,7 +270,7 @@ common.spec.est <- function(xx, q = NULL, ic.op = 5, ll){
   }
   if(is.null(q)){
     q.max <- min(50, floor(sqrt(min(nn - 1, p))))
-    qq <- fnets::hl.factor.number(xx, q.max, ll, w, do.plot = FALSE, center = FALSE)
+    qq <- hl.factor.number(xx, q.max, ll, w, do.plot = FALSE, center = FALSE)
     q <- qq$q.hat[ic.op]
     Sigma_x <- qq$Sigma_x
     sv <- qq$sv

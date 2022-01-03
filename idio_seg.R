@@ -226,7 +226,7 @@ post.cp.fa <- function(xx, est.cp.common, q = NULL, ic.op = 5, ll){
     }
     if(is.null(q)){
       q.max <- min(50, floor(sqrt(min(nn - 1, p))))
-      fne <- fnets::hl.factor.number(xx[, int, drop = FALSE], q.max, ll, w, do.plot = FALSE, center = FALSE)
+      fne <- hl.factor.number(xx[, int, drop = FALSE], q.max, ll, w, do.plot = FALSE, center = FALSE)
       qq <- fne$q.hat[ic.op]
       Gamma_x <- fne$Gamma_x
       Sigma_x <- fne$Sigma_x

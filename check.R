@@ -48,7 +48,6 @@ for(ii in 1:length(G.seq)){
   
   est.cp <- common.search.cp(cts, thr = thr, G, .5, 'max')
   est.cp <- common.check(xx, G, est.cp, thr, ll, NULL, 5, 'm', 'avg')
-  dev.off()
   common.est.cp.list[[ii]] <- est.cp
   
   matplot(cts$norm.stat, type = 'l'); abline(v = cp.common, lty = 2, col = 2, lwd = 2); abline(v = cp.idio, lty = 3, col = 8); abline(v = est.cp, col = 4, lty = 3)
@@ -60,6 +59,7 @@ print(est.cp <- bottom.up(common.est.cp.list, G.seq, .5))
 
 ##
 
+est.cp.common <- c()
 est.cp.common <- est.cp[, 1]
 
 K <- length(est.cp.common)
@@ -69,8 +69,8 @@ idx <- rep(c(1:(length(brks) - 1)), diff(brks))
 
 ll <- max(1, floor(min(G.seq)^(1/3)))
 
-pcfa <- post.cp.fa(xx, est.cp.common, NULL, 5, ll)
-dev.off()
+pcfa <- post.cp.fa(x, est.cp.common, NULL, 5, ll)
+pcfa$q.seq
 Gamma_c <- pcfa$Gamma_c[,, 1:(ll + 1),, drop = FALSE]
 
 idio.est.cp.list <- list()
@@ -79,7 +79,7 @@ idio.stat.list <- list()
 for(ii in 1:length(G.seq)){
   
   G <- G.seq[ii]
-  thr <- 1.5 # thr.const * max(sqrt(ll * log(n * p) / G), 1/ll, 1/sqrt(p))
+  thr <- 2 # thr.const * max(sqrt(ll * log(n * p) / G), 1/ll, 1/sqrt(p))
   vv <- G
   stat <- rep(0, n)
   check.cp <- est.cp <- c()
@@ -150,7 +150,9 @@ for(ii in 1:length(G.seq)){
     
   }
   
-  idio.est.cp.list[[ii]] <- est.cp
+  if(length(est.cp) > 0){
+    idio.est.cp.list[[ii]] <- est.cp
+  } else idio.est.cp.list[[ii]] <- NA
   idio.stat.list[[ii]] <- list(stat = stat, G = G, thr = thr, check.cp = check.cp)
   
 }
