@@ -45,7 +45,7 @@ common.two.step <- function(xx, G, thr, ll, tt.by, norm.type, agg.over.freq){
   
   len <- 2 * ll
   thetas <- 2 * pi * (0:len)/(len + 1)
-  w <- bartlett.weights(((-ll):ll)/ll)
+  w <- Bartlett.weights(((-ll):ll)/ll)
   
   # null <- x1 <- array(0, dim = c(p, p, ll + 1))
   # for(h in 0:ll){
@@ -173,7 +173,7 @@ common.stat.by <- function(xx, G, ll, tt.seq){
   
   p <- dim(xx)[1]
   
-  w <- bartlett.weights(((-ll):ll)/ll)
+  w <- Bartlett.weights(((-ll):ll)/ll)
   len <- 2 * ll
   thetas <- 2 * pi * (0:len)/(len + 1)
   
@@ -207,7 +207,7 @@ common.stat.seq <- function(xx, G, ll, s, e, stat0){
   
   p <- dim(xx)[1]
   
-  w <- bartlett.weights(((-ll):ll)/ll)
+  w <- Bartlett.weights(((-ll):ll)/ll)
   len <- 2 * ll
   thetas <- 2 * pi * (0:len)/(len + 1)
   
@@ -258,7 +258,7 @@ common.spec.est <- function(xx, q = NULL, ic.op = 5, ll){
   
   len <- 2 * ll
   thetas <- 2 * pi * (0:len)/(len + 1)
-  w <- bartlett.weights(((-ll):ll)/ll)
+  w <- Bartlett.weights(((-ll):ll)/ll)
   
   if(!is.null(q)){
     qq <- NA
@@ -272,7 +272,7 @@ common.spec.est <- function(xx, q = NULL, ic.op = 5, ll){
   }
   if(is.null(q)){
     q.max <- min(50, floor(sqrt(min(nn - 1, p))))
-    qq <- factor.number.est(xx, q.max, ll, w)
+    qq <- fnets::hl.factor.number(xx, q.max, ll, w, do.plot = FALSE, center = FALSE)
     q <- qq$q.hat[ic.op]
     Sigma_x <- qq$Sigma_x
     sv <- qq$sv

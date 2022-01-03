@@ -20,7 +20,7 @@ idio.seg <- function(x, G.seq, d = 1, thr.const, demean = TRUE,
   
   ll <- max(1, floor(min(G.seq)^(1/3)))
   
-  pcfa <- post.cp.factor.analysis(xx, est.cp.common, q, ic.op, ll)
+  pcfa <- post.cp.fa(xx, est.cp.common, q, ic.op, ll)
   Gamma_c <- pcfa$Gamma_c[,, 1:(ll + 1),, drop = FALSE]
 
   idio.est.cp.list <- list()
@@ -199,7 +199,7 @@ idio.cv <- function(xx, Gamma_c, idx, lambda.max = NULL, var.order = 1,
 }
 
 #' @keywords internal
-post.cp.factor.analysis <- function(xx, est.cp.common, q = NULL, ic.op = 5, ll){
+post.cp.fa <- function(xx, est.cp.common, q = NULL, ic.op = 5, ll){
   
   p <- dim(xx)[1]
   n <- dim(xx)[2]
@@ -207,7 +207,7 @@ post.cp.factor.analysis <- function(xx, est.cp.common, q = NULL, ic.op = 5, ll){
   brks <- c(0, est.cp.common, n)
   len <- 2 * ll
   thetas <- 2 * pi * (0:len)/(len + 1)
-  w <- bartlett.weights(((-ll):ll)/ll)
+  w <- Bartlett.weights(((-ll):ll)/ll)
   
   Gamma_c <- array(0, dim = c(p, p, 2 * ll + 1, length(brks) - 1))
   q.seq <- rep(0, length(brks) - 1)
@@ -226,7 +226,7 @@ post.cp.factor.analysis <- function(xx, est.cp.common, q = NULL, ic.op = 5, ll){
     }
     if(is.null(q)){
       q.max <- min(50, floor(sqrt(min(nn - 1, p))))
-      fne <- factor.number.est(xx[, int, drop = FALSE], q.max, ll, w)
+      fne <- fnets::hl.factor.number(xx[, int, drop = FALSE], q.max, ll, w, do.plot = FALSE, center = FALSE)
       qq <- fne$q.hat[ic.op]
       Gamma_x <- fne$Gamma_x
       Sigma_x <- fne$Sigma_x

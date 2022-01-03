@@ -1,6 +1,3 @@
-source("~/Dropbox/v/half baked/var/cp/code/haeran/favar.segment-main/common_seg.R")
-source("~/Dropbox/v/half baked/var/cp/code/haeran/favar.segment-main/idio_seg.R")
-source("~/Dropbox/v/half baked/var/cp/code/haeran/favar.segment-main/misc.R")
 
 n.seq <- 250 * c(1, 2, 3, 5, 8, 13)
 p.seq <- 100 * c(1, 2, 3, 5, 8)

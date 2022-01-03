@@ -75,7 +75,7 @@ sim.data <- function(n, p, q,
   x <- xi <- xi[, -(1:burnin)]
   
   if(q > 0){
-    chi/apply(chi, 1, sd) * apply(xi, 1, sd) 
+    chi <- chi/apply(chi, 1, sd) * apply(xi, 1, sd) 
     x <- x + chi
   }
   
@@ -84,8 +84,9 @@ sim.data <- function(n, p, q,
   
 }
 
+#' @title Bartlett weights
 #' @keywords internal
-bartlett.weights <- function(z) 1 - abs(z)
+Bartlett.weights <- function(x) 1 - abs(x)
 
 #' @keywords internal 
 acv.x <- function(xx, ll, w = NULL){
@@ -127,76 +128,78 @@ make.gg <- function(acv, d){
   
 }
 
-#' @keywords internal
-factor.number.est <- function(xx, q.max, ll, w){
-  
-  p <- dim(xx)[1]; n <- dim(xx)[2]
-  
-  p.seq <- floor(3*p/4 + (1:10) * p/40) 
-  n.seq <- n - (9:0) * floor(n/20)
-  const.seq <- seq(.001, 2, by = .01)
-  IC <- array(0, dim = c(q.max + 1, length(const.seq), 10, 2 * 3))
-  
-  for(kk in 1:10){
-    nn <- n.seq[kk]
-    pp <- p.seq[kk]
-    pen <- c((1/ll^2 + sqrt(ll/nn) + 1/pp) * log(min(pp, ll^2, sqrt(nn/ll))), 
-             1/sqrt(min(pp, ll^2, sqrt(nn/ll))), 
-             1/min(pp, ll^2, sqrt(nn/ll)) * log(min(pp, ll^2, sqrt(nn/ll))))
-    
-    ax <- acv.x(xx[, 1:nn, drop =FALSE], ll, w)
-    Gamma_x <- ax$Gamma_x
-    Gamma_xw <- ax$Gamma_xw
-    Sigma_x <- aperm(apply(Gamma_xw, c(1, 2), fft), c(2, 3, 1)) / (2 * pi)  
-    sv <- list(1:(ll + 1))
-    
-    tmp <- rep(0, q.max + 1)
-    for(ii in 1:(ll + 1)){
-      if(kk == length(n.seq)) nu <- q.max else nu <- 0
-      sv[[ii]] <- svd(Sigma_x[1:pp, 1:pp, ii], nu = nu, nv = 0) 
-      dd <- sum(sv[[ii]]$d)
-      tmp[1] <- tmp[1] + dd/pp/(2 * ll + 1)
-      for(jj in 1:q.max) {
-        dd <- dd - sv[[ii]]$d[jj]
-        tmp[jj + 1] <- tmp[jj + 1] + dd/pp/(2 * ll + 1)
-      }
-      for(jj in 1:length(const.seq)){
-        for(pen.op in 1:3){
-          IC[, jj, kk, 3 * 0 + pen.op] <- tmp + (0:q.max) * const.seq[jj] * pen[pen.op]
-          IC[, jj, kk, 3 * 1 + pen.op] <- log(tmp) + (0:q.max) * const.seq[jj] * pen[pen.op]
-        }
-      }
-    }
-  }
-  
-  q.mat <- apply(IC, c(2, 3, 4), which.min)
-  Sc <- apply(q.mat, c(1, 3), var)
-  q.hat <- rep(0, 6)
-  for(ii in 1:6){
-    ss <- Sc[, ii]
-    if(min(ss) > 0){
-      q.hat[ii] <- q.mat[which.min(ss), ii] - 1
-    } else{
-      q.hat[ii] <- q.mat[which(ss[-length(const.seq)] != 0 & ss[-1] == 0)[1] + 1, 10, ii] - 1
-    }
-  }
-  
-  par(mfrow = c(2, 3))
-  for(ii in 1:6){
-    plot(const.seq, q.mat[, 10, ii] - 1, type = 'b', pch = 1, col = 2, bty = 'n', axes = FALSE, xlab = 'constant', ylab = '', main = paste('IC ', ii))
-    box()
-    axis(1, at = pretty(range(const.seq)))
-    axis(2, at = pretty(range(q.mat[, 10, ii] - 1)), col = 2, col.ticks = 2, col.axis = 2)
-    par(new = TRUE)
-    plot(const.seq, Sc[, ii], col = 4, pch = 2, type = 'b', bty = 'n', axes = FALSE, xlab = '', ylab = '')
-    axis(4, at = pretty(range(Sc[, ii])), col = 4, col.ticks = 4, col.axis = 4)
-    legend('topright', legend = c('q', 'Sc'), col = c(2, 4), lty = c(1, 1), pch = c(1, 2), bty = 'n')
-  }
-  
-  ls <- list(q.hat = q.hat, Gamma_x = Gamma_x, Sigma_x = Sigma_x, sv = sv)
-  return(ls)
-  
-}
+#' #' @keywords internal
+#' factor.number.est <- function(xx, q.max, ll, w, do.plot = FALSE){
+#'   
+#'   p <- dim(xx)[1]; n <- dim(xx)[2]
+#'   
+#'   p.seq <- floor(3*p/4 + (1:10) * p/40) 
+#'   n.seq <- n - (9:0) * floor(n/20)
+#'   const.seq <- seq(.001, 2, by = .01)
+#'   IC <- array(0, dim = c(q.max + 1, length(const.seq), 10, 2 * 3))
+#'   
+#'   for(kk in 1:10){
+#'     nn <- n.seq[kk]
+#'     pp <- p.seq[kk]
+#'     pen <- c((1/ll^2 + sqrt(ll/nn) + 1/pp) * log(min(pp, ll^2, sqrt(nn/ll))), 
+#'              1/sqrt(min(pp, ll^2, sqrt(nn/ll))), 
+#'              1/min(pp, ll^2, sqrt(nn/ll)) * log(min(pp, ll^2, sqrt(nn/ll))))
+#'     
+#'     ax <- acv.x(xx[, 1:nn, drop =FALSE], ll, w)
+#'     Gamma_x <- ax$Gamma_x
+#'     Gamma_xw <- ax$Gamma_xw
+#'     Sigma_x <- aperm(apply(Gamma_xw, c(1, 2), fft), c(2, 3, 1)) / (2 * pi)  
+#'     sv <- list(1:(ll + 1))
+#'     
+#'     tmp <- rep(0, q.max + 1)
+#'     for(ii in 1:(ll + 1)){
+#'       if(kk == length(n.seq)) nu <- q.max else nu <- 0
+#'       sv[[ii]] <- svd(Sigma_x[1:pp, 1:pp, ii], nu = nu, nv = 0) 
+#'       dd <- sum(sv[[ii]]$d)
+#'       tmp[1] <- tmp[1] + dd/pp/(2 * ll + 1)
+#'       for(jj in 1:q.max) {
+#'         dd <- dd - sv[[ii]]$d[jj]
+#'         tmp[jj + 1] <- tmp[jj + 1] + dd/pp/(2 * ll + 1)
+#'       }
+#'       for(jj in 1:length(const.seq)){
+#'         for(pen.op in 1:3){
+#'           IC[, jj, kk, 3 * 0 + pen.op] <- tmp + (0:q.max) * const.seq[jj] * pen[pen.op]
+#'           IC[, jj, kk, 3 * 1 + pen.op] <- log(tmp) + (0:q.max) * const.seq[jj] * pen[pen.op]
+#'         }
+#'       }
+#'     }
+#'   }
+#'   
+#'   q.mat <- apply(IC, c(2, 3, 4), which.min)
+#'   Sc <- apply(q.mat, c(1, 3), var)
+#'   q.hat <- rep(0, 6)
+#'   for(ii in 1:6){
+#'     ss <- Sc[, ii]
+#'     if(min(ss) > 0){
+#'       q.hat[ii] <- q.mat[which.min(ss), ii] - 1
+#'     } else{
+#'       q.hat[ii] <- q.mat[which(ss[-length(const.seq)] != 0 & ss[-1] == 0)[1] + 1, 10, ii] - 1
+#'     }
+#'   }
+#'   
+#'   if(do.plot){
+#'     par(mfrow = c(2, 3))
+#'     for(ii in 1:6){
+#'       plot(const.seq, q.mat[, 10, ii] - 1, type = 'b', pch = 1, col = 2, bty = 'n', axes = FALSE, xlab = 'constant', ylab = '', main = paste('IC ', ii))
+#'       box()
+#'       axis(1, at = pretty(range(const.seq)))
+#'       axis(2, at = pretty(range(q.mat[, 10, ii] - 1)), col = 2, col.ticks = 2, col.axis = 2)
+#'       par(new = TRUE)
+#'       plot(const.seq, Sc[, ii], col = 4, pch = 2, type = 'b', bty = 'n', axes = FALSE, xlab = '', ylab = '')
+#'       axis(4, at = pretty(range(Sc[, ii])), col = 4, col.ticks = 4, col.axis = 4)
+#'       legend('topright', legend = c('q', 'Sc'), col = c(2, 4), lty = c(1, 1), pch = c(1, 2), bty = 'n')
+#'     }
+#'   }
+#'   
+#'   ls <- list(q.hat = q.hat, Gamma_x = Gamma_x, Sigma_x = Sigma_x, sv = sv)
+#'   return(ls)
+#'   
+#' }
 
 #' @keywords internal
 bottom.up <- function(est.cp.list, G.seq, eta){

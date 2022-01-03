@@ -1,4 +1,6 @@
-source("~/Dropbox/v/half baked/var/cp/code/hy/gdfm_functions.R")
+source("~/Documents/GitHub/favar.segment/common_seg.R")
+source("~/Documents/GitHub/favar.segment/idio_seg.R")
+source("~/Documents/GitHub/favar.segment/misc.R")
 
 n <- 2000
 p <- 100
@@ -11,17 +13,17 @@ cp.common <- c()
 cp.idio <- round(n * (1:3)/4)
 cp.idio <- c()
 
-x <- sim.data(n = n, p = p, q = q, 
-              cp.common = cp.common, den.common = 1, type.common = c('ma', 'ar')[2], ma.order = 2,
+ss <- sim.data(n = n, p = p, q = q, 
+              cp.common = cp.common, den.common = .75, type.common = c('ma', 'ar')[2], ma.order = 2,
               cp.idio = cp.idio, size.idio = 1, burnin = 100)
+x <- ss$x
+x <- ss$xi
+
 dp <- common.spec.est(t(scale(t(x), scale = FALSE)), q = NULL, ic.op = 5, max(1, floor(200^(1/3))))
 dp$hl$q.hat
 dev.off()
 
 G.seq <- c(200, 300, 400)
-
-p <- dim(x)[1]
-n <- dim(x)[2]
 
 mean.x <- apply(x, 1, mean)
 xx <- x - mean.x
@@ -31,26 +33,30 @@ xx <- x - mean.x
 common.est.cp.list <- list()
 common.stat.list <- list()
 
+thr <- 1.5
+
 for(ii in 1:length(G.seq)){
   G <- G.seq[ii]
   ll <- max(1, floor(G^(1/3)))
-  thr <- thr.const * p * max(sqrt(ll * log(n)/G), 1/ll, 1/p)
+  # thr <- thr.const * p * max(sqrt(ll * log(n)/G), 1/ll, 1/p)
   
-  common.stat.list[[ii]] <- cts <- common.two.step(xx, G, thr = 1.5, ll, ceiling(log(n)), 'm', 'avg')
+  common.stat.list[[ii]] <- 
+    cts <- common.two.step(xx, G, thr = thr, ll, ceiling(log(n)), 'm', 'avg')
   common.stat.list[[ii]]$G <- G
   common.stat.list[[ii]]$ll <- ll
   common.stat.list[[ii]]$thr <- thr
-  dev.off()
   
-  est.cp <- common.search.cp(cts, thr = 1.5, G, .5, 'max')
-  est.cp <- common.check(xx, G, est.cp, 1.5, ll, NULL, 5, 'm', 'avg')
+  est.cp <- common.search.cp(cts, thr = thr, G, .5, 'max')
+  est.cp <- common.check(xx, G, est.cp, thr, ll, NULL, 5, 'm', 'avg')
+  dev.off()
   common.est.cp.list[[ii]] <- est.cp
   
-  matplot(cts$norm.stat, type = 'l'); abline(v = cp.common, lty = 2, col = 2, lwd = 2); abline(v = cp.idio, lty = 3, col = 6); abline(v = est.cp, col = 4, lty = 3); abline(h = thr, col = 3); lines(cts$stat, col = 4, lwd = 2)
+  matplot(cts$norm.stat, type = 'l'); abline(v = cp.common, lty = 2, col = 2, lwd = 2); abline(v = cp.idio, lty = 3, col = 8); abline(v = est.cp, col = 4, lty = 3)
+  abline(h = thr, col = 3); lines(cts$stat, col = 4, lwd = 2)
   
 }
 
-est.cp <- bottom.up(common.est.cp.list, G.seq, .5)
+print(est.cp <- bottom.up(common.est.cp.list, G.seq, .5))
 
 ##
 
@@ -63,7 +69,8 @@ idx <- rep(c(1:(length(brks) - 1)), diff(brks))
 
 ll <- max(1, floor(min(G.seq)^(1/3)))
 
-pcfa <- post.cp.factor.analysis(xx, est.cp.common, NULL, 5, ll)
+pcfa <- post.cp.fa(xx, est.cp.common, NULL, 5, ll)
+dev.off()
 Gamma_c <- pcfa$Gamma_c[,, 1:(ll + 1),, drop = FALSE]
 
 idio.est.cp.list <- list()
