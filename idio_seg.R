@@ -5,20 +5,22 @@ library(doParallel)
 ## idio
 # if est.cp.common = c() and q = 0, it becomes var segmentation
 idio.seg <- function(x, G.seq, d = 1, thr.const, demean = TRUE,
-                     est.cp.common = c(), q = NULL, ic.op = 5,
+                     common.seg.out, q = NULL, ic.op = 5,
                      path.length = 10, n.folds = 1){
   
   p <- dim(x)[1]
   n <- dim(x)[2]
+  
+  est.cp.common <- common.seg.out$est.cp
   K <- length(est.cp.common)
   if(K > 0) est.cp.common <- sort(est.cp.common)
   brks <- c(0, est.cp.common, n)
   idx <- rep(c(1:(length(brks) - 1)), diff(brks))
   
+  ll <- common.seg.out$ll.seq[1]
+  
   if(demean) mean.x <- apply(x, 1, mean) else mean.x <- rep(0, p)
   xx <- x - mean.x
-  
-  ll <- max(1, floor(min(G.seq)^(1/3)))
   
   pcfa <- post.cp.fa(xx, est.cp.common, q, ic.op, ll)
   Gamma_c <- pcfa$Gamma_c[,, 1:(ll + 1),, drop = FALSE]
@@ -145,7 +147,7 @@ idio.cv <- function(xx, Gamma_c, idx, lambda.max = NULL, var.order = 1,
   
   nn <- ncol(xx)
   p <- nrow(xx)
-  ll <- dim(Gamma_c)[3] - 1
+  dd <- max(1, min(max(var.order), dim(Gamma_c)[3] - 1))
   
   if(is.null(lambda.max)) lambda.max <- max(abs(xx %*% t(xx)/nn)) * 1
   lambda.path <- round(exp(seq(log(lambda.max), log(lambda.max * .005), length.out = path.length)), digits = 10)
@@ -156,17 +158,17 @@ idio.cv <- function(xx, Gamma_c, idx, lambda.max = NULL, var.order = 1,
   for(fold in 1:n.folds){ 
     ind <- 1:ceiling(length(ind.list[[fold]]) * .5)
     tx <- xx[, ind.list[[fold]][ind]]
-    tb <- table(idx[ind])
+    tb <- table(idx[ind.list[[fold]][ind]])
     tb.idx <- as.numeric(names(tb))
-    train.acv <- acv.x(tx, ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE]
-    for(ii in tb.idx) train.acv <- train.acv - tb[ii]/length(ind) * Gamma_c[,,, ii]
+    train.acv <- acv.x(tx, dd)$Gamma_x[,, 1:(dd + 1), drop = FALSE]
+    for(ii in tb.idx) train.acv <- train.acv - tb[ii]/length(ind) * Gamma_c[,, 1:(dd + 1), ii]
     
-    ind <- setdiff(ind.list[[fold]], ind)
+    ind <- setdiff(1:length(ind.list[[fold]]), ind)
     tx <- xx[, ind.list[[fold]][ind]]
-    tb <- table(idx[ind])
+    tb <- table(idx[ind.list[[fold]][ind]])
     tb.idx <- as.numeric(names(tb))
-    test.acv <- acv.x(tx, ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE]
-    for(ii in tb.idx) test.acv <- test.acv - tb[ii]/length(ind) * Gamma_c[,,, ii]
+    test.acv <- acv.x(tx, dd)$Gamma_x[,, 1:(dd + 1), drop = FALSE]
+    for(ii in tb.idx) test.acv <- test.acv - tb[ii]/length(ind) * Gamma_c[,, 1:(dd + 1), ii]
     
     for(jj in 1:length(var.order)){
       if(var.order[jj] >= dim(train.acv)[3]){
@@ -180,14 +182,15 @@ idio.cv <- function(xx, Gamma_c, idx, lambda.max = NULL, var.order = 1,
       for(ii in 1:path.length){
         train.beta <- idio.beta(GG, gg, lambda = lambda.path[ii])$beta
         beta.gg <- t(train.beta) %*% test.gg
-        cv.err.mat[ii, jj] <- cv.err.mat[ii, jj] + sum(diag(test.acv[,, 1] - beta.gg - t(beta.gg) + t(train.beta) %*% test.GG %*% train.beta))
+        cv.err.mat[ii, jj] <- cv.err.mat[ii, jj] + 
+          sum(diag(test.acv[,, 1] - beta.gg - t(beta.gg) + t(train.beta) %*% test.GG %*% train.beta))
       }
     }
   }
   
-  cv.err.mat
-  lambda.min <- lambda.path[which.min(apply(cv.err.mat, 1, min))]
-  order.min <- var.order[which.min(apply(cv.err.mat, 2, min))]
+  cv.err.mat[cv.err.mat < 0] <- Inf
+  lambda.min <- min(lambda.path[apply(cv.err.mat, 1, min) == min(apply(cv.err.mat, 1, min))])
+  order.min <- min(var.order[apply(cv.err.mat, 2, min) == min(apply(cv.err.mat, 2, min))])
   
   matplot(lambda.path, cv.err.mat, type = 'b', col = 2:(length(var.order) + 1), pch = 2:(length(var.order) + 1), log = 'x', xlab = 'λ (log scale)', ylab = 'CV error')
   abline(v = lambda.min)

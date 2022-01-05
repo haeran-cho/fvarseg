@@ -74,11 +74,13 @@ sim.data <- function(n, p, q,
   # }
   # x <- xi <- xi[, -(1:burnin)]
   
+  A.list <- list()
   brks <- c(0, cp.idio, n)
   xi <- c()
   for(tt in 1:(length(brks) - 1)){
     tmp <- fnets::sim.var(brks[tt + 1] - brks[tt], p, Gamma = diag(1, p), heavy = FALSE)
     xi <- cbind(xi, tmp$data)
+    A.list[[tt]] <- tmp$A
   }
   x <- xi
   
@@ -87,7 +89,7 @@ sim.data <- function(n, p, q,
     x <- x + chi
   }
   
-  out <- list(x = x, xi = xi)
+  out <- list(x = x, xi = xi, A.list = A.list)
   return(out)
   
 }
@@ -218,23 +220,20 @@ bottom.up <- function(est.cp.list, G.seq, eta){
   dimnames(est.cp)[[2]] <- c('cp', 'G')
   
   kk.seq <- seq(1, length(G.seq))
-  kk <- kk.seq[1]
-  if(length(kk.seq) > 0){
-    while(length(kk.seq) > 0 & !is.na(est.cp.list[[kk]][1])){
-      cand.cp <- est.cp.list[[kk]]
-      if(length(cand.cp) > 0){
-        if(dim(est.cp)[1] == 0){
-          est.cp <- rbind(est.cp, cbind(cand.cp, G.seq[kk]))
-        } else{
-          for(ii in 1:length(cand.cp)){
-            if(min(abs(cand.cp[ii] - est.cp[, 1])) > G.seq[kk] * eta) est.cp <- 
-                rbind(est.cp, c(cand.cp[ii], G.seq[kk]))
-          }
+  while(length(est.cp.list) > 0 & length(kk.seq) > 0){
+    kk <- kk.seq[1]
+    cand.cp <- est.cp.list[[kk]]
+    if(length(cand.cp) > 0 & !is.na(cand.cp[1])){
+      if(dim(est.cp)[1] == 0){
+        est.cp <- rbind(est.cp, cbind(cand.cp, G.seq[kk]))
+      } else{
+        for(ii in 1:length(cand.cp)){
+          if(min(abs(cand.cp[ii] - est.cp[, 1])) > G.seq[kk] * eta) est.cp <- 
+              rbind(est.cp, c(cand.cp[ii], G.seq[kk]))
         }
       }
-      kk.seq <- setdiff(kk.seq, kk)
-      kk <- kk.seq[1]
     }
+    kk.seq <- setdiff(kk.seq, kk)
   }
 
   return(est.cp)

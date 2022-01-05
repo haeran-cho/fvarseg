@@ -10,10 +10,12 @@ common.seg <- function(x, G.seq, thr.const, tt.by = round(log(dim(x)[2])), q = N
   
   common.est.cp.list <- list()
   common.stat.list <- list()
-  
+  ll.seq <- c()
+
   for(ii in 1:length(G.seq)){
     G <- G.seq[ii]
-    ll <- max(1, floor(G^(1/3)))
+    ll <- max(1, min(floor(4 * (G/log(G))^(1/3)), floor(n/(2 * log(n)))))
+    ll.seq <- c(ll.seq, ll)
     thr <- thr.const * p * max(sqrt(ll * log(n)/G), 1/ll, 1/p)
     
     common.stat.list[[ii]] <- cts <- common.two.step(xx, G, thr, ll, tt.by, norm.type, agg.over.freq)
@@ -30,7 +32,8 @@ common.seg <- function(x, G.seq, thr.const, tt.by = round(log(dim(x)[2])), q = N
   
   est.cp <- bottom.up(est.cp.list, G.seq, eta)
   
-  out <- list(est.cp = est.cp, est.cp.list  = common.est.cp.list, stat.list = common.stat.list, mean.x = mean.x)
+  out <- list(est.cp = est.cp, G.seq = G.seq, ll.seq = ll.seq,
+              est.cp.list = common.est.cp.list, stat.list = common.stat.list, mean.x = mean.x)
   return(out)
   
 }

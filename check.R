@@ -18,15 +18,15 @@ ss <- sim.data(n = n, p = p, q = q,
               cp.idio = cp.idio, size.idio = 1, burnin = 100)
 x <- ss$x
 x <- ss$xi
-
-dp <- common.spec.est(t(scale(t(x), scale = FALSE)), q = NULL, ic.op = 5, max(1, floor(200^(1/3))))
-dp$hl$q.hat
-dev.off()
-
-G.seq <- c(200, 300, 400)
+A <- ss$A.list
 
 mean.x <- apply(x, 1, mean)
 xx <- x - mean.x
+
+dp <- common.spec.est(t(scale(t(x), scale = FALSE)), q = NULL, ic.op = 5, max(1, floor(200^(1/3))))
+dp$hl$q.hat
+
+G.seq <- c(200, 300, 400)
 
 ##
 
@@ -35,9 +35,11 @@ common.stat.list <- list()
 
 thr <- 1.5
 
+ll.seq <- c()
 for(ii in 1:length(G.seq)){
   G <- G.seq[ii]
-  ll <- max(1, floor(G^(1/3)))
+  ll <- max(1, floor(min(G^(1/3), n/(2 * log(n)))))
+  ll.seq <- c(ll.seq, ll)
   # thr <- thr.const * p * max(sqrt(ll * log(n)/G), 1/ll, 1/p)
   
   common.stat.list[[ii]] <- 
@@ -57,24 +59,28 @@ for(ii in 1:length(G.seq)){
 
 print(est.cp <- bottom.up(common.est.cp.list, G.seq, .5))
 
+common.seg.out <- list(est.cp = est.cp, G.seq = G.seq, ll.seq = ll.seq,
+                       est.cp.list = common.est.cp.list, 
+                       stat.list = common.stat.list, mean.x = mean.x)
 ##
 
 est.cp.common <- c()
 est.cp.common <- est.cp[, 1]
+
+ll <- ll.seq[1]
 
 K <- length(est.cp.common)
 if(K > 0) est.cp.common <- sort(est.cp.common)
 brks <- c(0, est.cp.common, n)
 idx <- rep(c(1:(length(brks) - 1)), diff(brks))
 
-ll <- max(1, floor(min(G.seq)^(1/3)))
-
-pcfa <- post.cp.fa(x, est.cp.common, NULL, 5, ll)
+pcfa <- post.cp.fa(x, est.cp.common, NULL, 5, floor(min(4 * G^(1/3), min(diff(brks))/(2 * log(min(diff(brks)))))))
 pcfa$q.seq
 Gamma_c <- pcfa$Gamma_c[,, 1:(ll + 1),, drop = FALSE]
 
 idio.est.cp.list <- list()
 idio.stat.list <- list()
+d <- 1
 
 for(ii in 1:length(G.seq)){
   
@@ -87,14 +93,32 @@ for(ii in 1:length(G.seq)){
   while(vv <= n - G){
     
     int <- (vv - G + 1):vv
-    icv <- idio.cv(xx = xx[, int, drop = FALSE], Gamma_c = Gamma_c, idx = idx, var.order = d, 
+    
+    icv <- idio.cv(xx = xx[, int, drop = FALSE], Gamma_c = Gamma_c, idx = idx[int], var.order = d, 
                    path.length = 10, n.folds = 1)  
+    
     tb <- tabulate(idx[int], nbins = K + 1)
     acv <- acv.x(xx[, int, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE]
     for(kk in 1:(K + 1)) acv <- acv - tb[kk] / G * Gamma_c[,,, kk]
     mg <- make.gg(acv, d)
-    beta <- idio.beta(mg$GG, mg$gg, icv$lambda)$beta
-    mean(beta != 0); image(beta, col = RColorBrewer::brewer.pal(11, 'RdBu'), breaks = seq(-max(abs(beta)), max(abs(beta)), length.out = 12))
+    beta <- idio.beta(mg$GG, mg$gg, icv$lambda/4)$beta
+    
+    if(FALSE){
+      A_hat0 <- t(beta); A0 <- A[[1]]
+      mean(beta != 0); image(beta, col = RColorBrewer::brewer.pal(11, 'RdBu'), breaks = seq(-max(abs(beta)), max(abs(beta)), length.out = 12))
+      norm(A_hat0 - A0, 'F')/norm(A0, 'F')
+      norm(A_hat0 - A0, '2')/norm(A0, '2')
+      fpr <- tpr <- rep(0, 100)
+      for(jj in 1:length(fpr)){
+        A_hat <- A_hat0
+        A_hat[abs(A_hat) < seq(min(abs(A_hat0)) * .999, max(abs(A_hat0)) * .999, length.out = length(fpr))[jj]] <- 0
+        fpr[jj] <- sum(A_hat[A0 == 0] != 0)/sum(A0 == 0)
+        tpr[jj] <- sum(A_hat[A0 != 0] != 0)/sum(A0 != 0)
+      }
+      plot(fpr, tpr, type = 'l', xlim = c(0, 1), ylim = c(0, 1))
+    }
+    
+    beta <- t(A[[1]])
     
     diff.Gamma_x <- acv.x(xx[, int, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE] -
       acv.x(xx[, int + G, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE]
