@@ -25,8 +25,7 @@ idio.seg <- function(x, G.seq, d = 1, thr.const, demean = TRUE,
   pcfa <- post.cp.fa(xx, est.cp.common, q, ic.op, ll)
   Gamma_c <- pcfa$Gamma_c[,, 1:(ll + 1),, drop = FALSE]
 
-  idio.est.cp.list <- list()
-  idio.stat.list <- list()
+  idio.list <- list()
   
   for(ii in 1:length(G.seq)){
     
@@ -100,14 +99,16 @@ idio.seg <- function(x, G.seq, d = 1, thr.const, demean = TRUE,
       
     }
     
-    idio.est.cp.list[[ii]] <- est.cp
-    idio.stat.list[[ii]] <- list(stat = stat, G = G, thr = thr, check.cp = check.cp)
-    
+    idio.list[[ii]]$cp <- est.cp
+    idio.list[[ii]]$stat <- stat
+    idio.list[[ii]]$G <- G
+    idio.list[[ii]]$thr <- thr
+    idio.list[[ii]]$check.cp <- check.cp
   }
   
-  est.cp <- bottom.up(est.cp.list, G.seq, eta)
+  est.cp <- bottom.up(idio.list, eta)
   
-  out <- list(est.cp = est.cp, est.cp.list = idio.est.cp.list, stat.list = idio.stat.list, mean.x = mean.x)
+  out <- list(est.cp = est.cp, est.cp.list = idio.list, mean.x = mean.x)
   return(out)
   
 }
@@ -148,6 +149,7 @@ idio.cv <- function(xx, Gamma_c, idx, lambda.max = NULL, var.order = 1,
   nn <- ncol(xx)
   p <- nrow(xx)
   dd <- max(1, min(max(var.order), dim(Gamma_c)[3] - 1))
+  K <- dim(Gamma_c)[4] - 1
   
   if(is.null(lambda.max)) lambda.max <- max(abs(xx %*% t(xx)/nn)) * 1
   lambda.path <- round(exp(seq(log(lambda.max), log(lambda.max * .005), length.out = path.length)), digits = 10)
@@ -158,17 +160,15 @@ idio.cv <- function(xx, Gamma_c, idx, lambda.max = NULL, var.order = 1,
   for(fold in 1:n.folds){ 
     ind <- 1:ceiling(length(ind.list[[fold]]) * .5)
     tx <- xx[, ind.list[[fold]][ind]]
-    tb <- table(idx[ind.list[[fold]][ind]])
-    tb.idx <- as.numeric(names(tb))
+    tb <- tabulate(idx[ind.list[[fold]][ind]], nbins = K + 1)
     train.acv <- acv.x(tx, dd)$Gamma_x[,, 1:(dd + 1), drop = FALSE]
-    for(ii in tb.idx) train.acv <- train.acv - tb[ii]/length(ind) * Gamma_c[,, 1:(dd + 1), ii]
+    for(ii in 1:(K + 1)) train.acv <- train.acv - tb[ii]/length(ind) * Gamma_c[,, 1:(dd + 1), ii]
     
     ind <- setdiff(1:length(ind.list[[fold]]), ind)
     tx <- xx[, ind.list[[fold]][ind]]
-    tb <- table(idx[ind.list[[fold]][ind]])
-    tb.idx <- as.numeric(names(tb))
+    tb <- tabulate(idx[ind.list[[fold]][ind]], nbins = K + 1)
     test.acv <- acv.x(tx, dd)$Gamma_x[,, 1:(dd + 1), drop = FALSE]
-    for(ii in tb.idx) test.acv <- test.acv - tb[ii]/length(ind) * Gamma_c[,, 1:(dd + 1), ii]
+    for(ii in 1:(K + 1)) test.acv <- test.acv - tb[ii]/length(ind) * Gamma_c[,, 1:(dd + 1), ii]
     
     for(jj in 1:length(var.order)){
       if(var.order[jj] >= dim(train.acv)[3]){
@@ -245,7 +245,7 @@ post.cp.fa <- function(xx, est.cp.common, q = NULL, ic.op = 5, ll){
           Sigma_c[,, 2 * ll + 1 - (ii - 1) + 1] <- Conj(Sigma_c[,, ii])
         }
       }
-      Gamma_c[,,, jj] <- (aperm(apply(Sigma_c, c(1, 2), fft, inverse = TRUE), c(2, 3, 1)) ) * (2 * pi) / (2 * ll + 1)
+      Gamma_c[,,, jj] <- aperm(apply(Sigma_c, c(1, 2), fft, inverse = TRUE), c(2, 3, 1)) * (2 * pi) / (2 * ll + 1)
     } 
   }
   ls <- list(Gamma_c = Re(Gamma_c), q.seq = q.seq)

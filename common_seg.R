@@ -8,8 +8,7 @@ common.seg <- function(x, G.seq, thr.const, tt.by = round(log(dim(x)[2])), q = N
   if(demean) mean.x <- apply(x, 1, mean) else mean.x <- rep(0, p)
   xx <- x - mean.x
   
-  common.est.cp.list <- list()
-  common.stat.list <- list()
+  common.list <- list()
   ll.seq <- c()
 
   for(ii in 1:length(G.seq)){
@@ -18,22 +17,22 @@ common.seg <- function(x, G.seq, thr.const, tt.by = round(log(dim(x)[2])), q = N
     ll.seq <- c(ll.seq, ll)
     thr <- thr.const * p * max(sqrt(ll * log(n)/G), 1/ll, 1/p)
     
-    common.stat.list[[ii]] <- cts <- common.two.step(xx, G, thr, ll, tt.by, norm.type, agg.over.freq)
-    common.stat.list[[ii]]$G <- G
-    common.stat.list[[ii]]$ll <- ll
-    common.stat.list[[ii]]$thr <- thr
+    common.list[[ii]] <- cts <- common.two.step(xx, G, thr, ll, tt.by, norm.type, agg.over.freq)
+    common.list[[ii]]$G <- G
+    common.list[[ii]]$ll <- ll
+    common.list[[ii]]$thr <- thr
     
     est.cp <- common.search.cp(cts, thr, G, eta)
     if(do.check) est.cp <- common.check(xx, G, est.cp, thr, ll, q, ic.op, norm.type, agg.over.freq)
-    common.est.cp.list[[ii]] <- est.cp
+    common.list[[ii]]$cp <- est.cp
     # matplot(cts$norm.stat, type = 'l'); abline(v = cp.common, lty = 2, col = 2, lwd = 2); abline(v = cp.idio, lty = 3, col = 6); abline(v = est.cp, col = 4, lty = 3); abline(h = thr, col = 3); lines(cts$stat, col = 4, lwd = 2)
     
   }
   
-  est.cp <- bottom.up(est.cp.list, G.seq, eta)
+  est.cp <- bottom.up(common.list, eta)
   
   out <- list(est.cp = est.cp, G.seq = G.seq, ll.seq = ll.seq,
-              est.cp.list = common.est.cp.list, stat.list = common.stat.list, mean.x = mean.x)
+              est.cp.list = common.list, mean.x = mean.x)
   return(out)
   
 }

@@ -214,22 +214,22 @@ hl.factor.number <- function(x, q.max, ll, w, do.plot = FALSE, center = TRUE){
 }
 
 #' @keywords internal
-bottom.up <- function(est.cp.list, G.seq, eta){
+bottom.up <- function(ls, eta){
   
   est.cp <- matrix(NA, nrow = 0, ncol = 2)
   dimnames(est.cp)[[2]] <- c('cp', 'G')
   
-  kk.seq <- seq(1, length(G.seq))
-  while(length(est.cp.list) > 0 & length(kk.seq) > 0){
+  kk.seq <- seq(1, length(ls))
+  while(length(kk.seq) > 0){
     kk <- kk.seq[1]
-    cand.cp <- est.cp.list[[kk]]
-    if(length(cand.cp) > 0 & !is.na(cand.cp[1])){
+    cand.cp <- ls[[kk]]$cp
+    if(length(cand.cp) > 0){
       if(dim(est.cp)[1] == 0){
-        est.cp <- rbind(est.cp, cbind(cand.cp, G.seq[kk]))
+        est.cp <- rbind(est.cp, cbind(cand.cp, ls[[kk]]$G))
       } else{
         for(ii in 1:length(cand.cp)){
-          if(min(abs(cand.cp[ii] - est.cp[, 1])) > G.seq[kk] * eta) est.cp <- 
-              rbind(est.cp, c(cand.cp[ii], G.seq[kk]))
+          if(min(abs(cand.cp[ii] - est.cp[, 1])) > ls[[kk]]$G * eta) est.cp <- 
+              rbind(est.cp, c(cand.cp[ii], ls[[kk]]$G))
         }
       }
     }
