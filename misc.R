@@ -1,6 +1,6 @@
 sim.data <- function(n, p, q,  
                      cp.common = c(), den.common = 1, type.common = c('ma', 'ar')[1], ma.order = 0,
-                     cp.idio = c(), size.idio = 1, burnin = 100, seed = NULL){
+                     cp.idio = c(), size.idio = 1, do.scale = TRUE, burnin = 100, seed = NULL){
   
   if(is.null(seed)) set.seed(seed)
   
@@ -55,37 +55,41 @@ sim.data <- function(n, p, q,
   
   ## idio commonponent
   
-  # sig_vep <- toeplitz(.3^(1:p - 1)) 
-  # xi <- vep <- t(mvtnorm::rmvnorm(n + burnin, sigma = sig_vep))
-  # 
-  # A <- matrix(0, nrow = p, ncol = p)
-  # c.A <- .4
-  # diag(A) <- c.A
-  # A[row(A) + 1 == col(A)] <- - c.A
-  # 
-  # brks <- c(0, c(cp.idio, n) + burnin)
-  # 
-  # for(tt in (brks[1] + 1 + 1):brks[2]) xi[, tt] <- vep[, tt] + A %*% xi[, tt - 1]
-  # if(length(cp.idio) >= 1){
-  #   for(j in 1:length(cp.idio)){
-  #     A[row(A) + 1 == col(A)] <- - size.idio * A[row(A) + 1 == col(A)]
-  #     for(tt in (brks[j + 1] + 1):brks[j + 2]) xi[, tt] <- vep[, tt] + A %*% xi[, tt - 1]
-  #   }
-  # }
-  # x <- xi <- xi[, -(1:burnin)]
-  
+  sig_vep <- toeplitz(.3^(1:p - 1))
+  xi <- vep <- t(mvtnorm::rmvnorm(n + burnin, sigma = sig_vep))
+
   A.list <- list()
-  brks <- c(0, cp.idio, n)
-  xi <- c()
-  for(tt in 1:(length(brks) - 1)){
-    tmp <- fnets::sim.var(brks[tt + 1] - brks[tt], p, Gamma = diag(1, p), heavy = FALSE)
-    xi <- cbind(xi, tmp$data)
-    A.list[[tt]] <- tmp$A
+  
+  A <- matrix(0, nrow = p, ncol = p)
+  c.A <- .4
+  diag(A) <- c.A
+  A[row(A) + 1 == col(A)] <- - c.A
+  A.list[[1]] <- A
+
+  brks <- c(0, c(cp.idio, n) + burnin)
+
+  for(tt in (brks[1] + 1 + 1):brks[2]) xi[, tt] <- vep[, tt] + A %*% xi[, tt - 1]
+  if(length(cp.idio) >= 1){
+    for(j in 1:length(cp.idio)){
+      A[row(A) + 1 == col(A)] <- - size.idio * A[row(A) + 1 == col(A)]
+      A.list[[j + 1]] <- A
+      for(tt in (brks[j + 1] + 1):brks[j + 2]) xi[, tt] <- vep[, tt] + A %*% xi[, tt - 1]
+    }
   }
-  x <- xi
+  x <- xi <- xi[, -(1:burnin)]
+  
+  # A.list <- list()
+  # brks <- c(0, cp.idio, n)
+  # xi <- c()
+  # for(tt in 1:(length(brks) - 1)){
+  #   tmp <- fnets::sim.var(brks[tt + 1] - brks[tt], p, Gamma = diag(1, p), heavy = FALSE)
+  #   xi <- cbind(xi, tmp$data)
+  #   A.list[[tt]] <- tmp$A
+  # }
+  # x <- xi
   
   if(q > 0){
-    chi <- chi/apply(chi, 1, sd) * apply(xi, 1, sd) 
+    if(do.scale) chi <- chi/apply(chi, 1, sd) * apply(xi, 1, sd) 
     x <- x + chi
   }
   

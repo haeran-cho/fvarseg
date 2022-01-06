@@ -1,9 +1,12 @@
-common.seg <- function(x, G.seq, thr.const, tt.by = round(log(dim(x)[2])), q = NULL, ic.op = 5, demean = TRUE,
-                       norm.type = c('f', '2', 'm'), ## possibly redundant if we're to do self-normalisation
-                       agg.over.freq = c('avg', 'max'), eta = .5, do.check = FALSE){
+common.seg <- function(x, G.seq, thr = 1.5, tt.by = round(log(dim(x)[2])), q = NULL, ic.op = 5, demean = TRUE,
+                       agg.over.freq = c('avg', 'max'), 
+                       rule = c('eta', 'epsilon'), eta = .5, epsilon = .1, do.check = FALSE){
   
   p <- dim(x)[1]
   n <- dim(x)[2]
+  
+  rule <- match.arg(rule, c('eta', 'epsilon'))
+  agg.over.freq <- match.arg(agg.over.freq, c('avg', 'max'))
   
   if(demean) mean.x <- apply(x, 1, mean) else mean.x <- rep(0, p)
   xx <- x - mean.x
@@ -15,15 +18,15 @@ common.seg <- function(x, G.seq, thr.const, tt.by = round(log(dim(x)[2])), q = N
     G <- G.seq[ii]
     ll <- max(1, min(floor(4 * (G/log(G))^(1/3)), floor(n/(2 * log(n)))))
     ll.seq <- c(ll.seq, ll)
-    thr <- thr.const * p * max(sqrt(ll * log(n)/G), 1/ll, 1/p)
+    # thr <- thr.const * p * max(sqrt(ll * log(n)/G), 1/ll, 1/p)
     
-    common.list[[ii]] <- cts <- common.two.step(xx, G, thr, ll, tt.by, norm.type, agg.over.freq)
+    common.list[[ii]] <- cts <- common.two.step(xx, G, thr, ll, tt.by, agg.over.freq)
     common.list[[ii]]$G <- G
     common.list[[ii]]$ll <- ll
     common.list[[ii]]$thr <- thr
     
-    est.cp <- common.search.cp(cts, thr, G, eta)
-    if(do.check) est.cp <- common.check(xx, G, est.cp, thr, ll, q, ic.op, norm.type, agg.over.freq)
+    est.cp <- common.search.cp(cts, thr, G, rule, epsilon)
+    if(do.check) est.cp <- common.check(xx, G, est.cp, thr, ll, q, ic.op, agg.over.freq)
     common.list[[ii]]$cp <- est.cp
     # matplot(cts$norm.stat, type = 'l'); abline(v = cp.common, lty = 2, col = 2, lwd = 2); abline(v = cp.idio, lty = 3, col = 6); abline(v = est.cp, col = 4, lty = 3); abline(h = thr, col = 3); lines(cts$stat, col = 4, lwd = 2)
     
@@ -38,7 +41,7 @@ common.seg <- function(x, G.seq, thr.const, tt.by = round(log(dim(x)[2])), q = N
 }
 
 #' @keywords internal
-common.two.step <- function(xx, G, thr, ll, tt.by, norm.type, agg.over.freq){  
+common.two.step <- function(xx, G, thr, ll, tt.by, agg.over.freq){  
   
   p <- dim(xx)[1]
   n <- dim(xx)[2]
@@ -95,7 +98,7 @@ common.two.step <- function(xx, G, thr, ll, tt.by, norm.type, agg.over.freq){
 }
 
 #' @keywords internal
-common.search.cp <- function(cts, thr, G, eta = .5, rule = c('max', 'over')[1]){
+common.search.cp <- function(cts, thr, G, rule, epsilon = .1){
   
   n <- length(cts$stat)
   est.cp <- c()
@@ -104,11 +107,11 @@ common.search.cp <- function(cts, thr, G, eta = .5, rule = c('max', 'over')[1]){
   
   while(sum(survived) > 0){
     mv <- max(new.stat)
-    theta.hat <- min(which(new.stat == mv))
-    int <- max(1, theta.hat - round(eta * G) + 1):min(theta.hat + round(eta * G), n)
-    if(rule == 'max') if(new.stat[theta.hat] >= max(new.stat[int])) est.cp <- c(est.cp, theta.hat)
-    if(rule == 'over') if(sum(new.stat[int] < thr) == 0) est.cp <- c(est.cp, theta.hat)
-    int <- max(1, theta.hat - G + 1):min(theta.hat + G, n)
+    hat.theta <- min(which(new.stat == mv))
+    int <- max(1, hat.theta - round(epsilon * G) + 1):min(hat.theta + round(epsilon * G), n)
+    if(rule == 'eta') if(new.stat[hat.theta] >= max(new.stat[int])) est.cp <- c(est.cp, hat.theta)
+    if(rule == 'epsilon') if(sum(new.stat[int] < thr) == 0) est.cp <- c(est.cp, hat.theta)
+    int <- max(1, hat.theta - G + 1):min(hat.theta + G, n)
     survived[int] <- FALSE
     new.stat[!survived] <- 0
   }
@@ -130,14 +133,14 @@ common.search.cp <- function(cts, thr, G, eta = .5, rule = c('max', 'over')[1]){
 #'   while(sum(survived) > 0){
 #'     agg.stat <- apply(new.norm.stat, 1, max)
 #'     mv <- max(agg.stat)
-#'     theta.hat0 <- min(which(agg.stat == mv))
-#'     lstar <- which.max(new.norm.stat[theta.hat0, ])
-#'     int <- max(1, theta.hat0 - round(eta * G) + 1):min(theta.hat0 + round(eta * G), n)
-#'     if(new.norm.stat[theta.hat0, lstar] >= max(new.norm.stat[int, lstar])){
-#'       theta.hat <- int[1] + which.max(new.stat[int]) - 1
-#'       est.cp <- c(est.cp, theta.hat)
+#'     hat.theta0 <- min(which(agg.stat == mv))
+#'     lstar <- which.max(new.norm.stat[hat.theta0, ])
+#'     int <- max(1, hat.theta0 - round(eta * G) + 1):min(hat.theta0 + round(eta * G), n)
+#'     if(new.norm.stat[hat.theta0, lstar] >= max(new.norm.stat[int, lstar])){
+#'       hat.theta <- int[1] + which.max(new.stat[int]) - 1
+#'       est.cp <- c(est.cp, hat.theta)
 #'     }
-#'     int <- max(1, theta.hat - G + 1):min(theta.hat + G, n)
+#'     int <- max(1, hat.theta - G + 1):min(hat.theta + G, n)
 #'     survived[int] <- FALSE
 #'     new.norm.stat[!survived, ] <- 0
 #'   }
@@ -292,7 +295,6 @@ common.spec.est <- function(xx, q = NULL, ic.op = 5, ll){
 
 #' @keywords internal
 common.check <- function(xx, G, est.cp, thr, ll, q = NULL, ic.op = 5, 
-                         norm.type, # redundant?
                          agg.over.freq, null.norm = NULL){
   
   p <- dim(xx)[1]; n <- dim(xx)[2]

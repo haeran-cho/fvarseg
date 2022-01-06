@@ -4,12 +4,15 @@ library(doParallel)
 
 ## idio
 # if est.cp.common = c() and q = 0, it becomes var segmentation
-idio.seg <- function(x, G.seq, d = 1, thr.const, demean = TRUE,
+idio.seg <- function(x, G.seq, d = 1, thr = 4, demean = TRUE,
                      common.seg.out, q = NULL, ic.op = 5,
-                     path.length = 10, n.folds = 1){
+                     path.length = 10, n.folds = 1, 
+                     rule = c('eta', 'epsilon'), eta = .5, epsilon = .1){
   
   p <- dim(x)[1]
   n <- dim(x)[2]
+  
+  rule <- match.arg(rule, c('eta', 'epsilon'))
   
   est.cp.common <- common.seg.out$est.cp
   K <- length(est.cp.common)
@@ -22,7 +25,8 @@ idio.seg <- function(x, G.seq, d = 1, thr.const, demean = TRUE,
   if(demean) mean.x <- apply(x, 1, mean) else mean.x <- rep(0, p)
   xx <- x - mean.x
   
-  pcfa <- post.cp.fa(xx, est.cp.common, q, ic.op, ll)
+  pcfa <- post.cp.fa(xx, est.cp.common, q, ic.op, 
+                     max(1, 4 * floor((min(diff(brks))/log(min(diff(brks))))^(1/3))))
   Gamma_c <- pcfa$Gamma_c[,, 1:(ll + 1),, drop = FALSE]
 
   idio.list <- list()
@@ -30,22 +34,24 @@ idio.seg <- function(x, G.seq, d = 1, thr.const, demean = TRUE,
   for(ii in 1:length(G.seq)){
     
     G <- G.seq[ii]
-    thr <- thr.const * max(sqrt(ll * log(n * p) / G), 1/ll, 1/sqrt(p))
+    # thr <- thr.const * max(sqrt(ll * log(n * p) / G), 1/ll, 1/sqrt(p))
     vv <- G
     stat <- rep(0, n)
     check.cp <- est.cp <- c()
+    do.beta <- TRUE
     
     while(vv <= n - G){
-      
       int <- (vv - G + 1):vv
-      icv <- idio.cv(xx = xx[, int, drop = FALSE], Gamma_c = Gamma_c, idx = idx, var.order = d, 
-                     path.length = path.length, n.folds = n.folds)  
-      tb <- tabulate(idx[int], nbins = K + 1)
-      acv <- acv.x(xx[, int, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE]
-      for(kk in 1:(K + 1)) acv <- acv - tb[kk] / G * Gamma_c[,,, kk]
-      mg <- make.gg(acv, d)
-      beta <- idio.beta(mg$GG, mg$gg, icv$lambda)$beta
-      # mean(beta != 0); fields::imagePlot(beta, col = RColorBrewer::brewer.pal(11, 'RdBu'), breaks = seq(-max(abs(beta)), max(abs(beta)), length.out = 12))
+      if(do.beta){
+        icv <- idio.cv(xx = xx[, int, drop = FALSE], Gamma_c = Gamma_c, idx = idx, var.order = d, 
+                       path.length = path.length, n.folds = n.folds)  
+        tb <- tabulate(idx[int], nbins = K + 1)
+        acv <- acv.x(xx[, int, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE]
+        for(kk in 1:(K + 1)) acv <- acv - tb[kk] / G * Gamma_c[,,, kk]
+        mg <- make.gg(acv, d)
+        beta <- idio.beta(mg$GG, mg$gg, icv$lambda)$beta
+        null.norm <- max(abs(mg$GG %*% beta - mg$gg))
+      }
       
       diff.Gamma_x <- acv.x(xx[, int, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE] - 
         acv.x(xx[, int + G, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE]
@@ -53,13 +59,11 @@ idio.seg <- function(x, G.seq, d = 1, thr.const, demean = TRUE,
       if(K > 0){
         common.weights <- tabulate(idx[int], nbins = K + 1) - 
           tabulate(idx[int + G], nbins = K + 1)
-        for(kk in 1:(K + 1)) diff.Gamma_c <- diff.Gamma_c + 
-            common.weights[kk] / G * Gamma_c[,,, kk]
+        for(kk in 1:(K + 1)) diff.Gamma_c <- diff.Gamma_c + common.weights[kk] / G * Gamma_c[,,, kk]
       }
       
-      mg <- make.gg(diff.Gamma_x - diff.Gamma_c, d)
-      null.norm <- max(abs(mg$GG %*% beta - mg$gg))
-      stat[vv] <- 1
+      mgd <- make.gg(diff.Gamma_x - diff.Gamma_c, d)
+      stat[vv] <- max(abs(mgd$GG %*% beta - mgd$gg)) / null.norm
       
       first <- TRUE
       tt <- vv + 1
@@ -78,8 +82,8 @@ idio.seg <- function(x, G.seq, d = 1, thr.const, demean = TRUE,
             tabulate(idx[(tt + 1):(tt + G)], nbins = K + 1)
           for(kk in 1:(K + 1)) diff.Gamma_c <- diff.Gamma_c + common.weights[kk] / G * Gamma_c[,,, kk]
         }
-        mg <- make.gg(diff.Gamma_x - diff.Gamma_c, d)
-        stat[tt] <- max(abs(mg$GG %*% beta - mg$gg)) / null.norm
+        mgd <- make.gg(diff.Gamma_x - diff.Gamma_c, d)
+        stat[tt] <- max(abs(mgd$GG %*% beta - mgd$gg)) / null.norm
         
         if(first & stat[tt] > thr){
           check.theta <- tt
@@ -93,17 +97,24 @@ idio.seg <- function(x, G.seq, d = 1, thr.const, demean = TRUE,
       
       if(check.theta < tt.max){
         hat.theta <- (check.theta:tt.max)[which.max(stat[check.theta:tt.max])]
-        est.cp <- c(est.cp, hat.theta)
-        vv <- hat.theta + G
+        if(rule == 'eta'){
+          est.cp <- c(est.cp, hat.theta)
+          vv <- hat.theta + G
+          do.beta <- TRUE
+        } else if(rule == 'epsilon'){
+          int <- max(1, hat.theta - round(epsilon * G) + 1):min(hat.theta + round(epsilon * G), n)
+          if(sum(stat[int] < thr) == 0){
+            est.cp <- c(est.cp, hat.theta)
+            vv <- hat.theta + G
+            do.beta <- TRUE
+          } else{
+            vv <- tt.max + 1
+            do.beta <- FALSE
+          }
+        }
       } else break
-      
     }
-    
-    idio.list[[ii]]$cp <- est.cp
-    idio.list[[ii]]$stat <- stat
-    idio.list[[ii]]$G <- G
-    idio.list[[ii]]$thr <- thr
-    idio.list[[ii]]$check.cp <- check.cp
+    idio.list[[ii]] <- list(cp = est.cp, norm.stat = stat, G = G, thr = thr, check.cp = check.cp)
   }
   
   est.cp <- bottom.up(idio.list, eta)
@@ -144,7 +155,7 @@ idio.beta <- function(GG, gg, lambda, n.cores = min(parallel::detectCores() - 1,
 
 #' @keywords internal
 idio.cv <- function(xx, Gamma_c, idx, lambda.max = NULL, var.order = 1, 
-                    path.length = 10, n.folds = 1){
+                    path.length = 10, n.folds = 1, do.plot = FALSE){
   
   nn <- ncol(xx)
   p <- nrow(xx)
@@ -192,9 +203,11 @@ idio.cv <- function(xx, Gamma_c, idx, lambda.max = NULL, var.order = 1,
   lambda.min <- min(lambda.path[apply(cv.err.mat, 1, min) == min(apply(cv.err.mat, 1, min))])
   order.min <- min(var.order[apply(cv.err.mat, 2, min) == min(apply(cv.err.mat, 2, min))])
   
-  matplot(lambda.path, cv.err.mat, type = 'b', col = 2:(length(var.order) + 1), pch = 2:(length(var.order) + 1), log = 'x', xlab = 'λ (log scale)', ylab = 'CV error')
-  abline(v = lambda.min)
-  legend('topleft', legend = var.order, col = 2:(length(var.order) + 1), pch = 2:(length(var.order) + 1), lty = 1)
+  if(do.plot){
+    matplot(lambda.path, cv.err.mat, type = 'b', col = 2:(length(var.order) + 1), pch = 2:(length(var.order) + 1), log = 'x', xlab = 'λ (log scale)', ylab = 'CV error')
+    abline(v = lambda.min)
+    legend('topleft', legend = var.order, col = 2:(length(var.order) + 1), pch = 2:(length(var.order) + 1), lty = 1)
+  }
   
   out <- list(lambda = lambda.min, var.order = order.min,  cv.error = cv.err.mat, lambda.path = lambda.path)
   return(out) 
