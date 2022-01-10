@@ -3,9 +3,8 @@ source("~/Documents/GitHub/favar.segment/idio_seg.R")
 source("~/Documents/GitHub/favar.segment/misc.R")
 
 n <- 2000
-p <- 50
+p <- 100
 q <- 3
-tc <- 2.5
 
 cp.common <- round(n * c(1/3, 2/3))
 cp.common <- c()
@@ -65,7 +64,7 @@ common.seg.out <- list(est.cp = est.cp, G.seq = G.seq, ll.seq = ll.seq,
 est.cp.common <- c()
 est.cp.common <- common.seg.out$est.cp[, 1]
 
-ll <- common.seg.out$ll.seq[1]
+ll <- min(common.seg.out$ll.seq)
 
 K <- length(est.cp.common)
 if(K > 0) est.cp.common <- sort(est.cp.common)

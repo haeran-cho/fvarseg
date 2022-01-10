@@ -20,7 +20,7 @@ idio.seg <- function(x, G.seq, d = 1, thr = 4, demean = TRUE,
   brks <- c(0, est.cp.common, n)
   idx <- rep(c(1:(length(brks) - 1)), diff(brks))
   
-  ll <- common.seg.out$ll.seq[1]
+  ll <- min(common.seg.out$ll.seq)
   
   if(demean) mean.x <- apply(x, 1, mean) else mean.x <- rep(0, p)
   xx <- x - mean.x
@@ -43,7 +43,7 @@ idio.seg <- function(x, G.seq, d = 1, thr = 4, demean = TRUE,
     while(vv <= n - G){
       int <- (vv - G + 1):vv
       if(do.beta){
-        icv <- idio.cv(xx = xx[, int, drop = FALSE], Gamma_c = Gamma_c, idx = idx, var.order = d, 
+        icv <- idio.cv(xx = xx[, int, drop = FALSE], Gamma_c = Gamma_c, idx = idx[int], var.order = d, 
                        path.length = path.length, n.folds = n.folds)  
         tb <- tabulate(idx[int], nbins = K + 1)
         acv <- acv.x(xx[, int, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE]
