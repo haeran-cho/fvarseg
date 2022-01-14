@@ -3,20 +3,21 @@ source("~/Documents/GitHub/favar.segment/idio_seg.R")
 source("~/Documents/GitHub/favar.segment/misc.R")
 
 n <- 2000
-p <- 100
+p <- 50
 q <- 3
 
 cp.common <- round(n * c(1/3, 2/3))
-cp.common <- c()
+#cp.common <- c()
 
 cp.idio <- round(n * (1:3)/4)
-cp.idio <- c()
+#cp.idio <- c()
 
 ss <- sim.data(n = n, p = p, q = q, 
-              cp.common = cp.common, den.common = .5, type.common = c('ma', 'ar')[1], ma.order = 2,
+              cp.common = cp.common, den.common = 1, type.common = c('ma', 'ar')[1], ma.order = 2,
               cp.idio = cp.idio, size.idio = 1, do.scale = !FALSE, burnin = 100)
+
 x <- ss$x
-x <- ss$xi
+#x <- ss$xi
 
 mean.x <- apply(x, 1, mean)
 xx <- x - mean.x
@@ -25,6 +26,7 @@ dp <- common.spec.est(t(scale(t(x), scale = FALSE)), q = NULL, ic.op = 5, max(1,
 dp$hl$q.hat
 
 G.seq <- c(200, 300, 400)
+#G.seq <- c(250, 350, 450)
 
 ##
 
@@ -33,25 +35,34 @@ common.list <- list()
 thr <- 1.5
 
 ll.seq <- c()
+
 for(ii in 1:length(G.seq)){
   G <- G.seq[ii]
   ll <- max(1, floor(min(G^(1/3), n/(2 * log(n)))))
   ll.seq <- c(ll.seq, ll)
-  # thr <- thr.const * p * max(sqrt(ll * log(n)/G), 1/ll, 1/p)
+  
+  #thr <- thr.const * p * max(sqrt(ll * log(n)/G), 1/ll, 1/p)
   
   common.list[[ii]] <- 
-    cts <- common.two.step(xx, G, thr = thr, ll, ceiling(log(n)), 'm', 'avg')
+    #cts <- common.two.step(xx, G, thr = thr, ll, ceiling(log(n)), 'm', 'avg')
+    cts <- common.two.step(xx, G, thr = thr, ll, ceiling(log(n)), 'avg') ### added by HYEYOUNG
   common.list[[ii]]$G <- G
   common.list[[ii]]$ll <- ll
   common.list[[ii]]$thr <- thr
   
+  matplot(cts$norm.stat, type = 'l'); abline(v = cp.common, lty = 2, col = 2, lwd = 2); abline(v = cp.idio, lty = 3, col = 8); 
+  abline(h = thr, col = 3); lines(cts$stat, col = 4, lwd = 2)
+  
   # est.cp <- common.search.cp(cts, thr = thr, G, 'max')
-  est.cp <- common.search.cp(cts, thr = thr, G, 'over')
-  est.cp <- common.check(xx, G, est.cp, thr, ll, NULL, 5, 'm', 'avg')
+  #est.cp <- common.search.cp(cts, thr = thr, G, 'over')
+  est.cp <- common.search.cp(cts, thr = thr, G, 'eta') ### added by HYEYOUNG
+  #est.cp <- common.search.cp(cts, thr = thr, G, 'epsilon') ### added by HYEYOUNG
+  
+  # est.cp <- common.check(xx, G, est.cp, thr, ll, NULL, 5, 'm', 'avg')
+  est.cp <- common.check(xx, G, est.cp, thr, ll, NULL, 5, 'avg') ### added by HYEYOUNG
   common.list[[ii]]$cp <- est.cp
   
-  matplot(cts$norm.stat, type = 'l'); abline(v = cp.common, lty = 2, col = 2, lwd = 2); abline(v = cp.idio, lty = 3, col = 8); abline(v = est.cp, col = 4, lty = 3)
-  abline(h = thr, col = 3); lines(cts$stat, col = 4, lwd = 2)
+  abline(v = est.cp, col = 4, lty = 3)
   
 }
 
@@ -59,7 +70,9 @@ print(est.cp <- bottom.up(common.list, .5))
 
 common.seg.out <- list(est.cp = est.cp, G.seq = G.seq, ll.seq = ll.seq,
                        est.cp.list = common.list, mean.x = mean.x)
-##
+
+
+#####
 
 est.cp.common <- c()
 est.cp.common <- common.seg.out$est.cp[, 1]
@@ -202,7 +215,7 @@ for(ii in 1:length(G.seq)){
       }
       tt <- tt + 1
     }  
-    ts.plot(stat); abline(h = thr, col = 3); abline(v = check.cp, col = 6); abline(v = cp.idio, col = 2, lty = 3)
+    ts.plot(stat, ylim=range(c(stat, thr))); abline(h = thr, col = 3); abline(v = check.cp, col = 6); abline(v = cp.idio, col = 2, lty = 3)
     
     if(check.theta < tt.max){
       hat.theta <- (check.theta:tt.max)[which.max(stat[check.theta:tt.max])]
@@ -233,4 +246,5 @@ for(ii in 1:length(G.seq)){
   
 }
 
+bottom.up(common.list, .5)
 bottom.up(idio.list, .5)
