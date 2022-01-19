@@ -25,7 +25,7 @@ common.seg <- function(x, G.seq, thr = 1.5, tt.by = round(log(dim(x)[2])), q = N
     common.list[[ii]]$ll <- ll
     common.list[[ii]]$thr <- thr
     
-    est.cp <- common.search.cp(cts, thr, G, rule, epsilon)
+    est.cp <- common.search.cp(cts, thr, G, rule, eta, epsilon)
     if(do.check) est.cp <- common.check(xx, G, est.cp, thr, ll, q, ic.op, agg.over.freq)
     common.list[[ii]]$cp <- est.cp
     # matplot(cts$norm.stat, type = 'l'); abline(v = cp.common, lty = 2, col = 2, lwd = 2); abline(v = cp.idio, lty = 3, col = 6); abline(v = est.cp, col = 4, lty = 3); abline(h = thr, col = 3); lines(cts$stat, col = 4, lwd = 2)
@@ -98,7 +98,7 @@ common.two.step <- function(xx, G, thr, ll, tt.by, agg.over.freq){
 }
 
 #' @keywords internal
-common.search.cp <- function(cts, thr, G, rule, epsilon = .1){
+common.search.cp <- function(cts, thr, G, rule, eta = .5, epsilon = .1){
   
   n <- length(cts$stat)
   est.cp <- c()
@@ -108,9 +108,14 @@ common.search.cp <- function(cts, thr, G, rule, epsilon = .1){
   while(sum(survived) > 0){
     mv <- max(new.stat)
     hat.theta <- min(which(new.stat == mv))
-    int <- max(1, hat.theta - round(epsilon * G) + 1):min(hat.theta + round(epsilon * G), n)
-    if(rule == 'eta') if(new.stat[hat.theta] >= max(new.stat[int])) est.cp <- c(est.cp, hat.theta)
-    if(rule == 'epsilon') if(sum(new.stat[int] < thr) == 0) est.cp <- c(est.cp, hat.theta)
+    if(rule == 'eta'){
+      int <- max(1, hat.theta - round(eta * G) + 1):min(hat.theta + round(eta * G), n)
+      if(new.stat[hat.theta] >= max(new.stat[int])) est.cp <- c(est.cp, hat.theta)
+    }
+    if(rule == 'epsilon'){
+      int <- max(1, hat.theta - round(epsilon * G) + 1):min(hat.theta + round(epsilon * G), n)
+      if(sum(new.stat[int] < thr) == 0) est.cp <- c(est.cp, hat.theta)
+    }
     int <- max(1, hat.theta - G + 1):min(hat.theta + G, n)
     survived[int] <- FALSE
     new.stat[!survived] <- 0

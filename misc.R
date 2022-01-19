@@ -98,6 +98,107 @@ sim.data <- function(n, p, q,
   
 }
 
+sim.data <- function(n, p, q,  
+                     cp.common = c(), den.common = 1, type.common = c('ma', 'ar')[1], ma.order = 0,
+                     cp.idio = c(), size.idio = 1, do.scale = TRUE, burnin = 100, seed = NULL){
+  
+  if(is.null(seed)) set.seed(seed)
+  
+  # common component
+  if(q > 0){
+    brks <- c(0, c(cp.common, n) + burnin)
+    
+    if(type.common == 'ma'){
+      u <- sqrt(rep(c(1, .5, 1.5), ceiling(q/3))[1:q]) * matrix(rnorm(q * (n + burnin)), nrow = q)
+      chi <- matrix(0, nrow = p, ncol = n + burnin)
+      for(ii in 1:(ma.order + 1)){
+        bb <- matrix(rnorm(p * q), nrow = p) 
+        chi[, ii:brks[2]] <- chi[, ii:brks[2]] + bb %*% u[, ii:brks[2] - ii + 1]
+        
+        if(length(cp.common) >= 1){  
+          for(j in 1:length(cp.common)){
+            cp.ind <- sample(p, floor(den.common * p))
+            bb[cp.ind, ] <- matrix(rnorm(length(cp.ind) * q), ncol = q)
+            chi[, (brks[j + 1] + 1):brks[j + 2]] <- chi[, (brks[j + 1] + 1):brks[j + 2]] + 
+              bb %*% u[, (brks[j + 1] + 1):brks[j + 2] - ii + 1]
+          }
+        }
+      }
+    }
+    
+    if(type.common == 'ar'){ 
+      u <- matrix(rnorm(q * (n + burnin)), nrow = q)
+      chi <- matrix(0, nrow = p, ncol = n + burnin)
+      bb <- matrix(runif(p * q, -1, 1), nrow = p)
+      
+      for(k in 0:length(cp.common)){
+        tmp <- matrix(0, nrow = p, ncol = n + burnin)
+        if(k == 0) ar.coef <- matrix(runif(p * q, -.8, .8), nrow = p)
+        if(k >= 1){
+          cp.ind <- sample(p, floor(den.common * p))
+          ar.coef[cp.ind, ] <- -ar.coef[cp.ind, ]
+        }
+        for(ii in 1:p){
+          uu <- u
+          for(j in 1:q){
+            for(tt in 2:(n + burnin)) {
+              uu[j, tt] <- ar.coef[ii, j] * uu[j, tt - 1] + uu[j, tt]
+            }
+            tmp[ii, ] <- tmp[ii, ] + bb[ii, j] * uu[j, ]
+          }
+        }
+        chi[, (brks[k + 1] + 1):brks[k + 2]] <- tmp[, (brks[k + 1] + 1):brks[k + 2]]
+      }
+    }
+    chi <- chi[, -(1:burnin)] 
+  } else chi <- matrix(0, nrow = p, ncol = n)
+  
+  ## idio commonponent
+  
+  # sig_vep <- toeplitz(.3^(1:p - 1))
+  # xi <- vep <- t(mvtnorm::rmvnorm(n + burnin, sigma = sig_vep))
+  # 
+  # A.list <- list()
+  # 
+  # A <- matrix(0, nrow = p, ncol = p)
+  # c.A <- .4
+  # diag(A) <- c.A
+  # A[row(A) + 1 == col(A)] <- - c.A
+  # A.list[[1]] <- A
+  # 
+  # brks <- c(0, c(cp.idio, n) + burnin)
+  # 
+  # for(tt in (brks[1] + 1 + 1):brks[2]) xi[, tt] <- vep[, tt] + A %*% xi[, tt - 1]
+  # if(length(cp.idio) >= 1){
+  #   for(j in 1:length(cp.idio)){
+  #     A[row(A) + 1 == col(A)] <- - size.idio * A[row(A) + 1 == col(A)]
+  #     A.list[[j + 1]] <- A
+  #     for(tt in (brks[j + 1] + 1):brks[j + 2]) xi[, tt] <- vep[, tt] + A %*% xi[, tt - 1]
+  #   }
+  # }
+  # x <- xi <- xi[, -(1:burnin)]
+  
+  A.list <- list()
+  brks <- c(0, cp.idio, n)
+  xi <- c()
+  for(tt in 1:(length(brks) - 1)){
+    tmp <- fnets::sim.var(brks[tt + 1] - brks[tt], p, Gamma = diag(1, p), heavy = FALSE)
+    xi <- cbind(xi, tmp$data)
+    A.list[[tt]] <- tmp$A
+  }
+  x <- xi
+  
+  if(q > 0){
+    if(do.scale) chi <- chi/apply(chi, 1, sd) * apply(xi, 1, sd) 
+    x <- x + chi
+  }
+  
+  out <- list(x = x, xi = xi, A.list = A.list)
+  return(out)
+  
+}
+
+
 #' @title Bartlett weights
 #' @keywords internal
 Bartlett.weights <- function(x) 1 - abs(x)

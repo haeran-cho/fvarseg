@@ -2,22 +2,22 @@ source("~/Documents/GitHub/favar.segment/common_seg.R")
 source("~/Documents/GitHub/favar.segment/idio_seg.R")
 source("~/Documents/GitHub/favar.segment/misc.R")
 
-n.seq <- 250 * c(4, 8, 12, 2)
-p.seq <- 25 * c(1, 2, 4, 8)
+n.seq <- 250 * c(4, 8)
+p.seq <- 25 * c(1, 2, 4)
 G.seq <- c(1/8, 1/5, 1/4)
 q <- 3
 d <- 1
 
-sim <- 200
+sim <- 2
 
-for(nn in 1){
+for(nn in 1:length(n.seq)){
   n <- n.seq[nn]
   
   for(pp in 1:length(p.seq)){
     p <- p.seq[pp]
     
-    common.out <- idio.out <- 
-      array(0, dim = c(sim, length(G.seq), 2, 3)) # (max scaled, max unscaled) x (x1, x2, xi)
+    idio.out <- 
+      array(0, dim = c(sim, length(G.seq), 3, 2, 3)) # (acv0, spec0, 1) x (1, beta1) x (x1, x2, xi)
     
     for(ii in 1:sim){
       for(jj in 1:3){
@@ -45,17 +45,13 @@ for(nn in 1){
         for(gg in 1:3){
           G <- ceiling(n * G.seq[gg])
           
-          ll <- max(1, floor(G^(1/3)))
-          common.thr <- p * max(sqrt(ll * log(n)/G), 1/ll, 1/p)
-          cts <- common.two.step(xx, G, Inf, ll, 2, 'avg')
-          common.out[ii, gg, 1, jj] <- max(cts$stat)/common.thr
-          common.out[ii, gg, 2, jj] <- max(cts$stat)
+          dpca <- fnets:::dyn.pca(xx[, 1:G], q = qq, ic.op = 5)
+          spec <- Re(dpca$spec$Sigma_i[,, 1])
+          acv <- dpca$acv$Gamma_i[,, 1]
           
-          ##
+          ll <- max(1, floor(G^(1/3)))
           
           stat <- rep(0, n)
-          
-          idio.thr <- max(sqrt(ll * log(n * p) / G), 1/ll, 1/sqrt(p))
           
           pcfa <- post.cp.fa(xx, c(), qq, 5, max(1, 4 * floor((n/log(n))^(1/3))))
           Gamma_c <- pcfa$Gamma_c[,, 1:(ll + 1),, drop = FALSE]
@@ -67,12 +63,11 @@ for(nn in 1){
           acv <- acv.x(xx[, int, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE]
           mg <- make.gg(acv - Gamma_c[,,, 1], d)
           beta <- idio.beta(mg$GG, mg$gg, icv$lambda)$beta
-          null.norm <- max(abs(mg$GG %*% beta - mg$gg))
           
           diff.Gamma_x <- acv - 
             acv.x(xx[, int + G, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE]
           mgd <- make.gg(diff.Gamma_x, d)
-          stat[G] <- max(abs(mgd$GG %*% beta - mgd$gg)) / null.norm 
+          stat[G] <- max(abs(mgd$GG %*% beta - mgd$gg)) 
           
           tt <- G + 1
           while(tt <= n - G){
@@ -84,17 +79,18 @@ for(nn in 1){
                 xx[, tt + G - h, drop = FALSE] %*% t(xx[, tt + G, drop = FALSE]) / G
             }
             mgd <- make.gg(diff.Gamma_x, d)
-            stat[tt] <- max(abs(mgd$GG %*% beta - mgd$gg)) / null.norm
+            stat[tt] <- max(abs(mgd$GG %*% beta - mgd$gg))
             tt <- tt + 1
           }  
           
-          idio.out[ii, gg, 1, jj] <- max(stat)/idio.thr
-          idio.out[ii, gg, 2, jj] <- max(stat)
+          idio.out[ii, gg, 1, 1, jj] <- max(stat)/max(abs(spec))
+          idio.out[ii, gg, 2, 1, jj] <- max(stat)/max(abs(acv))
+          idio.out[ii, gg, 3, 1, jj] <- max(stat)
+          idio.out[ii, gg, , 2, jj] <- idio.out[ii, gg, , 1, jj]/norm(beta, "1")
         }
       }
     }
     
-    save(common.out, file = paste('common_n', n, 'p', p, '.RData', sep = ''))
     save(idio.out, file = paste('idio_n', n, 'p', p, '.RData', sep = ''))
     
   }
