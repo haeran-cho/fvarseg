@@ -10,10 +10,10 @@ cp.common <- round(n * c(1/3, 2/3))
 #cp.common <- c()
 
 cp.idio <- round(n * (1:3)/4)
-#cp.idio <- c()
+cp.idio <- c()
 
 ss <- sim.data(n = n, p = p, q = q, 
-              cp.common = cp.common, den.common = 1, type.common = c('ma', 'ar')[1], ma.order = 2,
+              cp.common = cp.common, den.common = 1, type.common = c('ma', 'ar')[2], ma.order = 2,
               cp.idio = cp.idio, size.idio = 1, do.scale = !FALSE, burnin = 100)
 
 x <- ss$x
@@ -44,7 +44,6 @@ for(ii in 1:length(G.seq)){
   #thr <- thr.const * p * max(sqrt(ll * log(n)/G), 1/ll, 1/p)
   
   common.list[[ii]] <- 
-    #cts <- common.two.step(xx, G, thr = thr, ll, ceiling(log(n)), 'm', 'avg')
     cts <- common.two.step(xx, G, thr = thr, ll, ceiling(log(n)), 'avg') ### added by HYEYOUNG
   common.list[[ii]]$G <- G
   common.list[[ii]]$ll <- ll
@@ -53,12 +52,8 @@ for(ii in 1:length(G.seq)){
   matplot(cts$norm.stat, type = 'l'); abline(v = cp.common, lty = 2, col = 2, lwd = 2); abline(v = cp.idio, lty = 3, col = 8); 
   abline(h = thr, col = 3); lines(cts$stat, col = 4, lwd = 2)
   
-  # est.cp <- common.search.cp(cts, thr = thr, G, 'max')
-  #est.cp <- common.search.cp(cts, thr = thr, G, 'over')
-  est.cp <- common.search.cp(cts, thr = thr, G, 'eta') ### added by HYEYOUNG
-  #est.cp <- common.search.cp(cts, thr = thr, G, 'epsilon') ### added by HYEYOUNG
+  est.cp <- common.search.cp(cts, thr = thr, G, c('eta', 'epsilon')[2], epsilon = .1 * G.seq[1]/G) ### added by HYEYOUNG
   
-  # est.cp <- common.check(xx, G, est.cp, thr, ll, NULL, 5, 'm', 'avg')
   est.cp <- common.check(xx, G, est.cp, thr, ll, NULL, 5, 'avg') ### added by HYEYOUNG
   common.list[[ii]]$cp <- est.cp
   
@@ -98,9 +93,12 @@ if(FALSE){
 }
 
 idio.list <- list()
-ii <- d <- 1
-rule <- c('max', 'over')[2]
+d <- 1
+rule <- c('eta', 'epsilon')[2]
 epsilon <- .1
+
+
+ii <- d <- 1
 
 for(ii in 1:length(G.seq)){
   
@@ -219,11 +217,11 @@ for(ii in 1:length(G.seq)){
     
     if(check.theta < tt.max){
       hat.theta <- (check.theta:tt.max)[which.max(stat[check.theta:tt.max])]
-      if(rule == 'max'){
+      if(rule == 'eta'){
         est.cp <- c(est.cp, hat.theta)
         vv <- hat.theta + G
         do.beta <- TRUE
-      } else if(rule == 'over'){
+      } else if(rule == 'epsilon'){
         int <- max(1, hat.theta - round(epsilon * G) + 1):min(hat.theta + round(epsilon * G), n)
         if(sum(stat[int] < thr) == 0){
           est.cp <- c(est.cp, hat.theta)
