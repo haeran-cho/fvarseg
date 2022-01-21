@@ -225,7 +225,7 @@ post.cp.fa <- function(xx, est.cp.common, q = NULL, ic.op = 5, ll){
   thetas <- 2 * pi * (0:len)/(len + 1)
   w <- Bartlett.weights(((-ll):ll)/ll)
   
-  Gamma_c <- array(0, dim = c(p, p, 2 * ll + 1, length(brks) - 1))
+  Sigma_c <- Gamma_c <- array(0, dim = c(p, p, 2 * ll + 1, length(brks) - 1))
   q.seq <- rep(0, length(brks) - 1)
   
   for(jj in 1:(length(brks) - 1)){
@@ -251,17 +251,16 @@ post.cp.fa <- function(xx, est.cp.common, q = NULL, ic.op = 5, ll){
     q.seq[jj] <- qq
     
     if(qq >= 1){
-      Sigma_c <- Sigma_x * 0
       for(ii in 1:(ll + 1)){
-        Sigma_c[,, ii] <- sv[[ii]]$u[, 1:qq, drop = FALSE] %*% diag(sv[[ii]]$d[1:qq], qq) %*% Conj(t(sv[[ii]]$u[, 1:qq, drop = FALSE]))
+        Sigma_c[,, ii, jj] <- sv[[ii]]$u[, 1:qq, drop = FALSE] %*% diag(sv[[ii]]$d[1:qq], qq) %*% Conj(t(sv[[ii]]$u[, 1:qq, drop = FALSE]))
         if(ii > 1){
-          Sigma_c[,, 2 * ll + 1 - (ii - 1) + 1] <- Conj(Sigma_c[,, ii])
+          Sigma_c[,, 2 * ll + 1 - (ii - 1) + 1, jj] <- Conj(Sigma_c[,, ii, jj])
         }
       }
-      Gamma_c[,,, jj] <- aperm(apply(Sigma_c, c(1, 2), fft, inverse = TRUE), c(2, 3, 1)) * (2 * pi) / (2 * ll + 1)
+      Gamma_c[,,, jj] <- aperm(apply(Sigma_c[,,, jj], c(1, 2), fft, inverse = TRUE), c(2, 3, 1)) * (2 * pi) / (2 * ll + 1)
     } 
   }
-  ls <- list(Gamma_c = Re(Gamma_c), q.seq = q.seq)
+  ls <- list(Sigma_c = Sigma_c, Gamma_c = Re(Gamma_c), q.seq = q.seq)
   
   return(ls)
   

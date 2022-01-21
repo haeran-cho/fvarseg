@@ -3,7 +3,7 @@ source("~/Documents/GitHub/favar.segment/idio_seg.R")
 source("~/Documents/GitHub/favar.segment/misc.R")
 
 n.seq <- 250 * c(4, 8)
-p.seq <- 25 * c(1, 2, 4)
+p.seq <- 25 * c(2, 4, 6)
 G.seq <- c(1/8, 1/5, 1/4)
 q <- 2
 
@@ -19,7 +19,7 @@ for(nn in 1:length(n.seq)){
     p <- p.seq[pp]
     
     idio.out <- 
-      array(0, dim = c(sim, length(G.seq), 3, 2, 3)) # (acv0, spec0, 1) x (1, beta1) x (x1, x2, xi)
+      array(NA, dim = c(sim, length(G.seq), 3, 2, 3)) # (acv0, spec0, 1) x (1, beta1) x (x1, x2, xi)
     
     for(ii in 1:sim){
       for(jj in 1:3){
@@ -27,21 +27,21 @@ for(nn in 1:length(n.seq)){
         if(jj == 1){
           ss <- sim.data2(n, p, q,
                           cp.common = c(), den.common = 1, type.common = c('ma', 'ar')[1],
-                          cp.idio = c(), size.idio = 1, d = d, do.scale = !FALSE)
+                          cp.idio = c(), size.idio = 1, d = d, do.scale = !FALSE, seed = ii)
           qq <- q
           xx <- ss$x * KK
         }  
         if(jj == 2){
           ss <- sim.data2(n, p, q,
                           cp.common = c(), den.common = 1, type.common = c('ma', 'ar')[2],
-                          cp.idio = c(), size.idio = 1, d = d, do.scale = !FALSE)
+                          cp.idio = c(), size.idio = 1, d = d, do.scale = !FALSE, seed = ii)
           qq <- q
           xx <- ss$x * KK
         }
         if(jj == 3){
           ss <- sim.data2(n, p, 0,
                           cp.common = cp.common, den.common = 1, type.common = c('ma', 'ar')[2],
-                          cp.idio = c(), size.idio = 1, d = d, do.scale = !FALSE)
+                          cp.idio = c(), size.idio = 1, d = d, do.scale = !FALSE, seed = ii)
           qq <- 0
           xx <- ss$x * KK
         }
@@ -61,11 +61,18 @@ for(nn in 1:length(n.seq)){
           int <- 1:G
           
           dpca <- fnets:::dyn.pca(xx[, int], q = qq, ic.op = 5)
-          spec0 <- Re(dpca$spec$Sigma_i[,, 1])
-          acv0 <- dpca$acv$Gamma_i[,, 1]
+          # spec0 <- Re(dpca$spec$Sigma_i[,, 1])
+          # acv0 <- dpca$acv$Gamma_i[,, 1]
           acv <- dpca$acv$Gamma_x[,, 1:(ll + 1), drop = FALSE]
-          
-          ycv <- fnets:::yw.cv(xx[, int], method = 'ds', var.order = d, q = dpca$q, do.plot = TRUE)
+          dpca.r <- fnets:::dyn.pca(xx[, int + G], q = qq, ic.op = 5)
+          if(jj == 3){
+            spec0 <- dpca$spec$Sigma_x[,, 1:(ll + 1)] - dpca.r$spec$Sigma_x[,, 1:(ll + 1)]
+            acv0 <- dpca$acv$Gamma_x[,, 1:(ll + 1)] - dpca.r$acv$Gamma_x[,, 1:(ll + 1)]
+          } else{
+            spec0 <- dpca$spec$Sigma_c[,, 1:(ll + 1)] - dpca.r$spec$Sigma_c[,, 1:(ll + 1)]
+            acv0 <- dpca$acv$Gamma_c[,, 1:(ll + 1)] - dpca.r$acv$Gamma_c[,, 1:(ll + 1)]
+          }
+          ycv <- fnets:::yw.cv(xx[, int], method = 'ds', var.order = d, q = dpca$q, do.plot = !TRUE)
           mg <- fnets:::make.gg(dpca$acv$Gamma_i, d)
           ive <- fnets:::var.dantzig(mg$GG, mg$gg, ycv$lambda)
           beta <- ive$beta
@@ -98,12 +105,13 @@ for(nn in 1:length(n.seq)){
             tt <- tt + 1
           }
           
-          # ts.plot(stat)
+          # ts.plot(stat/max(abs(Re(dpca$spec$Sigma_x[,, 1]))))
+          # ts.plot(stat/max(abs(Re(dpca$acv$Gamma_i[,, 1]))))
           
           idio.out[ii, gg, 1, 1, jj] <- max(stat)/max(abs(spec0))
           idio.out[ii, gg, 2, 1, jj] <- max(stat)/max(abs(acv0))
           idio.out[ii, gg, 3, 1, jj] <- max(stat)
-          idio.out[ii, gg, , 2, jj] <- idio.out[ii, gg, , 1, jj]/norm(beta, "1")
+          if(norm(beta, "1") > 0) idio.out[ii, gg, , 2, jj] <- idio.out[ii, gg, , 1, jj]/norm(beta, "1")
         }
       }
     }
@@ -135,14 +143,24 @@ dimnames(idio.out)[[2]] <- round(n * G.seq)
 out0 <- idio.out
 out1 <- idio.out
 
-jj <- 3 # c('spec', 'acv', 'none')
+jj <- 1 # c('spec', 'acv', 'none')
 kk <- 1 # c('1', 'beta')
 
-apply(out0[,, jj, kk,], c(2, 3), quantile, c(.95), TRUE) /
-apply(out1[,, jj, kk,], c(2, 3), quantile, c(.95), TRUE)
+qu <- .95
+
+apply(out0[,, jj, kk,], c(2, 3), quantile, qu, TRUE) /
+apply(out1[,, jj, kk,], c(2, 3), quantile, qu, TRUE)
+
+apply(out0[,, jj, kk,], c(2, 3), quantile, qu, TRUE)
+apply(out1[,, jj, kk,], c(2, 3), quantile, qu, TRUE)
+
+apply(out0[,, jj, kk, 1], 2, quantile, qu, TRUE)/apply(out0[,, jj, kk, 2], 2, quantile, qu, TRUE)
+apply(out0[,, jj, kk, 1], 2, quantile, qu, TRUE)/apply(out0[,, jj, kk, 3], 2, quantile, qu, TRUE)
+apply(out0[,, jj, kk, 2], 2, quantile, qu, TRUE)/apply(out0[,, jj, kk, 3], 2, quantile, qu, TRUE)
 
 par(mfcol = c(2, 3))
-for(jj in 1:3){
-  boxplot(common.out[,, kk, jj], main = paste('common_n', n, 'p', p, sep = ''), ylim = c(1, 2))
-  boxplot(idio.out[,, kk, jj], main = paste('idio_n', n, 'p', p, sep = ''), ylim = c(1, 5))
+for(ll in 1:3){
+  boxplot(out0[,, jj, kk, ll], main = paste('idio0_n', n, 'p', p, sep = ''), ylim = c(1, 5))
+  boxplot(out1[,, jj, kk, ll], main = paste('idio1_n', n, 'p', p, sep = ''), ylim = c(1, 5))
 }
+

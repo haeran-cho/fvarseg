@@ -98,9 +98,9 @@ sim.data <- function(n, p, q,
   
 }
 
-sim.data2 <- function(n, p, q,  
+sim.data2 <- function(n, p, q =2,  
                       cp.common = c(), den.common = 1, type.common = c('ma', 'ar')[1], 
-                      cp.idio = c(), size.idio = 1, d = 2, 
+                      cp.idio = c(), size.idio = 1, d = 1, 
                       do.scale = TRUE, seed = NULL){
   
   if(!is.null(seed)) set.seed(seed)
@@ -161,7 +161,7 @@ sim.data2 <- function(n, p, q,
     }
   } 
   
-  ## idio commonponent
+  ## idio component
 
   burnin <- 100
   prob <- 1/p
@@ -177,19 +177,19 @@ sim.data2 <- function(n, p, q,
       A1[which(index == 1)] <- .275
       A1 <- A1 / norm(A1, "2")
       if(d == 2){
-        A1 <- A1 * .5
+        A1 <- A1 * .7
         index <- sample(c(0, 1), p^2, TRUE, prob = c(1 - prob, prob))
         A2[which(index == 1)] <- .275
-        A2 <- A2 / norm(A2, "2") * .5
+        A2 <- A2 / norm(A2, "2") * .3
       }
     }
     if(k >= 1){
       A1 <- - A1; A2 <- - A2
     }
-    A <- cbind(A1, A2)
     for(tt in 3:(n + burnin)) tmp[, tt] <- tmp[, tt] + A1 %*% tmp[, tt - 1] + A2 %*% tmp[, tt - 2]
     tmp <- tmp[, -(1:burnin)]
     xi[, (brks[k + 1] + 1):brks[k + 2]] <- tmp[, (brks[k + 1] + 1):brks[k + 2]]
+    if(d == 1) A <- A1 else if(d == 2) A <- cbind(A1, A2)
     A.list[[k + 1]] <- A
   }
 
