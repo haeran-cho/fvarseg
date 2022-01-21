@@ -19,7 +19,7 @@ for(nn in 1:length(n.seq)){
     p <- p.seq[pp]
     
     idio.out <- 
-      array(NA, dim = c(sim, length(G.seq), 3, 2, 3)) # (acv0, spec0, 1) x (1, beta1) x (x1, x2, xi)
+      array(NA, dim = c(sim, length(G.seq), 3, 2, 3)) # (acv0, spec0, lambda) x (1, beta1) x (x1, x2, xi)
     
     for(ii in 1:sim){
       for(jj in 1:3){
@@ -64,7 +64,7 @@ for(nn in 1:length(n.seq)){
           # spec0 <- Re(dpca$spec$Sigma_i[,, 1])
           # acv0 <- dpca$acv$Gamma_i[,, 1]
           acv <- dpca$acv$Gamma_x[,, 1:(ll + 1), drop = FALSE]
-          dpca.r <- fnets:::dyn.pca(xx[, int + G], q = qq, ic.op = 5)
+          dpca.r <- fnets:::dyn.pca(xx[, 1:n], q = qq, ic.op = 5)
           if(jj == 3){
             spec0 <- dpca$spec$Sigma_x[,, 1:(ll + 1)] - dpca.r$spec$Sigma_x[,, 1:(ll + 1)]
             acv0 <- dpca$acv$Gamma_x[,, 1:(ll + 1)] - dpca.r$acv$Gamma_x[,, 1:(ll + 1)]
@@ -72,6 +72,8 @@ for(nn in 1:length(n.seq)){
             spec0 <- dpca$spec$Sigma_c[,, 1:(ll + 1)] - dpca.r$spec$Sigma_c[,, 1:(ll + 1)]
             acv0 <- dpca$acv$Gamma_c[,, 1:(ll + 1)] - dpca.r$acv$Gamma_c[,, 1:(ll + 1)]
           }
+          lambda.max <- max(abs(xx[, int] %*% t(xx[, int])/G))
+          lambda.path <- round(exp(seq(log(lambda.max), log(lambda.max * .0001), length.out = 10)), digits = 10)
           ycv <- fnets:::yw.cv(xx[, int], method = 'ds', var.order = d, q = dpca$q, do.plot = !TRUE)
           mg <- fnets:::make.gg(dpca$acv$Gamma_i, d)
           ive <- fnets:::var.dantzig(mg$GG, mg$gg, ycv$lambda)
@@ -110,7 +112,7 @@ for(nn in 1:length(n.seq)){
           
           idio.out[ii, gg, 1, 1, jj] <- max(stat)/max(abs(spec0))
           idio.out[ii, gg, 2, 1, jj] <- max(stat)/max(abs(acv0))
-          idio.out[ii, gg, 3, 1, jj] <- max(stat)
+          idio.out[ii, gg, 3, 1, jj] <- max(stat)/lambda.path[4]
           if(norm(beta, "1") > 0) idio.out[ii, gg, , 2, jj] <- idio.out[ii, gg, , 1, jj]/norm(beta, "1")
         }
       }
@@ -143,7 +145,7 @@ dimnames(idio.out)[[2]] <- round(n * G.seq)
 out0 <- idio.out
 out1 <- idio.out
 
-jj <- 1 # c('spec', 'acv', 'none')
+jj <- 1 # c('spec', 'acv', 'lambda')
 kk <- 1 # c('1', 'beta')
 
 qu <- .95
