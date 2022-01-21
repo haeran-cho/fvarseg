@@ -117,8 +117,8 @@ dimnames(common.out)[[2]] <- dimnames(idio.out)[[2]] <- round(n * G.seq)
 
 kk <- 2
 
-apply(common.out[,, kk,], c(2, 3), quantile, .9)
-apply(idio.out[,, kk,], c(2, 3), quantile, .9)
+signif(apply(common.out[,, kk,], c(2, 3), quantile, .9), 4)
+signif(apply(idio.out[,, kk,], c(2, 3), quantile, .9), 4)
 
 jj <- 2 # ma, ar, none
 kk <- 2

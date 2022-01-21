@@ -5,10 +5,12 @@ source("~/Documents/GitHub/favar.segment/misc.R")
 n.seq <- 250 * c(4, 8)
 p.seq <- 25 * c(1, 2, 4)
 G.seq <- c(1/8, 1/5, 1/4)
-q <- 3
-d <- 1
+q <- 2
 
-sim <- 2
+d <- 2
+KK <- 100
+
+sim <- 200
 
 for(nn in 1:length(n.seq)){
   n <- n.seq[nn]
@@ -23,46 +25,59 @@ for(nn in 1:length(n.seq)){
       for(jj in 1:3){
         
         if(jj == 1){
-          ss <- sim.data(n, p, q, cp.common = c(), den.common = 0, 
-                         type.common = c('ma', 'ar')[1], ma.order = 2,
-                         cp.idio = c(), size.idio = 0, seed = ii)
+          ss <- sim.data2(n, p, q,
+                          cp.common = c(), den.common = 1, type.common = c('ma', 'ar')[1],
+                          cp.idio = c(), size.idio = 1, d = d, do.scale = !FALSE)
           qq <- q
+          xx <- ss$x * KK
         }  
         if(jj == 2){
-          ss <- sim.data(n, p, q, cp.common = c(), den.common = 0, 
-                         type.common = c('ma', 'ar')[2], ma.order = 0,
-                         cp.idio = c(), size.idio = 0, seed = ii)
+          ss <- sim.data2(n, p, q,
+                          cp.common = c(), den.common = 1, type.common = c('ma', 'ar')[2],
+                          cp.idio = c(), size.idio = 1, d = d, do.scale = !FALSE)
           qq <- q
+          xx <- ss$x * KK
         }
         if(jj == 3){
-          ss <- sim.data(n, p, 0, cp.common = c(), den.common = 0, 
-                         type.common = c('ma', 'ar')[2], ma.order = 0,
-                         cp.idio = c(), size.idio = 0, seed = ii)
+          ss <- sim.data2(n, p, 0,
+                          cp.common = cp.common, den.common = 1, type.common = c('ma', 'ar')[2],
+                          cp.idio = c(), size.idio = 1, d = d, do.scale = !FALSE)
           qq <- 0
+          xx <- ss$x * KK
         }
-        xx <- ss$x - apply(ss$x, 1, mean)
+        xx <- xx - apply(xx, 1, mean)
         
         for(gg in 1:3){
           G <- ceiling(n * G.seq[gg])
-          
-          dpca <- fnets:::dyn.pca(xx[, 1:G], q = qq, ic.op = 5)
-          spec <- Re(dpca$spec$Sigma_i[,, 1])
-          acv <- dpca$acv$Gamma_i[,, 1]
           
           ll <- max(1, floor(G^(1/3)))
           
           stat <- rep(0, n)
           
-          pcfa <- post.cp.fa(xx, c(), qq, 5, max(1, 4 * floor((n/log(n))^(1/3))))
+          pcfa <- post.cp.fa(xx, c(), qq, 5, max(1, 4 * floor((G/log(G))^(1/3))))
           Gamma_c <- pcfa$Gamma_c[,, 1:(ll + 1),, drop = FALSE]
           idx <- rep(1, n)
           
           int <- 1:G
-          icv <- idio.cv(xx = xx[, int, drop = FALSE], Gamma_c = Gamma_c, idx = idx[int], var.order = d, 
-                         path.length = 10, n.folds = 1, do.plot = !TRUE)  
-          acv <- acv.x(xx[, int, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE]
-          mg <- make.gg(acv - Gamma_c[,,, 1], d)
-          beta <- idio.beta(mg$GG, mg$gg, icv$lambda)$beta
+          
+          dpca <- fnets:::dyn.pca(xx[, int], q = qq, ic.op = 5)
+          spec0 <- Re(dpca$spec$Sigma_i[,, 1])
+          acv0 <- dpca$acv$Gamma_i[,, 1]
+          acv <- dpca$acv$Gamma_x[,, 1:(ll + 1), drop = FALSE]
+          
+          ycv <- fnets:::yw.cv(xx[, int], method = 'ds', var.order = d, q = dpca$q, do.plot = TRUE)
+          mg <- fnets:::make.gg(dpca$acv$Gamma_i, d)
+          ive <- fnets:::var.dantzig(mg$GG, mg$gg, ycv$lambda)
+          beta <- ive$beta
+          
+          # lambda.max <- max(abs(acv0))
+          # lambda.path <- round(exp(seq(log(lambda.max), log(lambda.max * .05), length.out = 10)), digits = 10)
+          # icv <- idio.cv(xx = xx[, int, drop = FALSE], lambda.max = NULL, Gamma_c = Gamma_c, idx = idx[int], var.order = d, path.length = 10, n.folds = 1, do.plot = TRUE)  
+          # acv <- acv.x(xx[, int, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE]
+          # mg <- make.gg(acv - Gamma_c[,,, 1], d)
+          # beta <- idio.beta(mg$GG, mg$gg, min(icv$lambda, lambda.path[5]))$beta
+          
+          # par(mfrow = c(1, 2)); fields::imagePlot(beta, nlevel = 12, breaks = seq(-.3, .3, length.out = 13)); fields::imagePlot(t(ss$A.list[[1]]), nlevel = 12, breaks = seq(-.3, .3, length.out = 13))
           
           diff.Gamma_x <- acv - 
             acv.x(xx[, int + G, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE]
@@ -81,43 +96,50 @@ for(nn in 1:length(n.seq)){
             mgd <- make.gg(diff.Gamma_x, d)
             stat[tt] <- max(abs(mgd$GG %*% beta - mgd$gg))
             tt <- tt + 1
-          }  
+          }
           
-          idio.out[ii, gg, 1, 1, jj] <- max(stat)/max(abs(spec))
-          idio.out[ii, gg, 2, 1, jj] <- max(stat)/max(abs(acv))
+          # ts.plot(stat)
+          
+          idio.out[ii, gg, 1, 1, jj] <- max(stat)/max(abs(spec0))
+          idio.out[ii, gg, 2, 1, jj] <- max(stat)/max(abs(acv0))
           idio.out[ii, gg, 3, 1, jj] <- max(stat)
           idio.out[ii, gg, , 2, jj] <- idio.out[ii, gg, , 1, jj]/norm(beta, "1")
         }
       }
     }
     
-    save(idio.out, file = paste('idio_n', n, 'p', p, '.RData', sep = ''))
+    save(idio.out, file = paste('idio_new_n', n, 'p', p, 'd', d, 'K', KK, '.RData', sep = ''))
     
   }
 }
 
 
-n.seq <- 250 * c(1, 2, 4, 8, 12)
-p.seq <- 25 * c(1, 2, 4, 8)
+n.seq <- 250 * c(4, 8)
+p.seq <- 25 * c(1, 2, 4)
 G.seq <- c(1/8, 1/5, 1/4)
 
-n <- n.seq[3]
-p <- p.seq[3]
+n <- n.seq[1]
+p <- p.seq[1]
 
-load(file = paste('~/downloads/sim/sim_lanc/common_n', n, 'p', p, '.RData', sep = ''))
-load(file = paste('~/downloads/sim/sim_lanc/idio_n', n, 'p', p, '.RData', sep = ''))
+ll <- 2
+d <- c(1, 2)[ll]
+KK <- c(10, 100)[ll]
 
-dimnames(common.out)[[4]] <- dimnames(idio.out)[[4]] <- c('ma', 'ar', 'none')
-dimnames(common.out)[[3]] <- dimnames(idio.out)[[3]] <- c('scale', 'no')
-dimnames(common.out)[[2]] <- dimnames(idio.out)[[2]] <- round(n * G.seq)
+load(file = paste('~/downloads/sim/sim_lanc/idio_new_n', n, 'p', p, 'd', d, 'K', KK, '.RData', sep = ''))
 
-kk <- 2
+dimnames(idio.out)[[5]] <- c('ma', 'ar', 'none')
+dimnames(idio.out)[[4]] <- c('1', 'beta')
+dimnames(idio.out)[[3]] <- c('spec', 'acv', 'none')
+dimnames(idio.out)[[2]] <- round(n * G.seq)
 
-apply(common.out[,, kk,], c(2, 3), quantile, .9)
-apply(idio.out[,, kk,], c(2, 3), quantile, .9)
+out0 <- idio.out
+out1 <- idio.out
 
-jj <- 2 # ma, ar, none
-kk <- 2
+jj <- 3 # c('spec', 'acv', 'none')
+kk <- 1 # c('1', 'beta')
+
+apply(out0[,, jj, kk,], c(2, 3), quantile, c(.95), TRUE) /
+apply(out1[,, jj, kk,], c(2, 3), quantile, c(.95), TRUE)
 
 par(mfcol = c(2, 3))
 for(jj in 1:3){
