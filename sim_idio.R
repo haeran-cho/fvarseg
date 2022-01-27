@@ -7,8 +7,8 @@ p.seq <- 25 * c(2, 4, 6)
 G.seq <- c(1/8, 1/5, 1/4)
 q <- 2
 
-d <- 2
-KK <- 100
+d <- 1
+KK <- 1
 
 sim <- 200
 
@@ -64,17 +64,14 @@ for(nn in 1:length(n.seq)){
           # spec0 <- Re(dpca$spec$Sigma_i[,, 1])
           # acv0 <- dpca$acv$Gamma_i[,, 1]
           acv <- dpca$acv$Gamma_x[,, 1:(ll + 1), drop = FALSE]
-          dpca.r <- fnets:::dyn.pca(xx[, 1:n], q = qq, ic.op = 5)
-          if(jj == 3){
-            spec0 <- dpca$spec$Sigma_x[,, 1:(ll + 1)] - dpca.r$spec$Sigma_x[,, 1:(ll + 1)]
-            acv0 <- dpca$acv$Gamma_x[,, 1:(ll + 1)] - dpca.r$acv$Gamma_x[,, 1:(ll + 1)]
-          } else{
-            spec0 <- dpca$spec$Sigma_c[,, 1:(ll + 1)] - dpca.r$spec$Sigma_c[,, 1:(ll + 1)]
-            acv0 <- dpca$acv$Gamma_c[,, 1:(ll + 1)] - dpca.r$acv$Gamma_c[,, 1:(ll + 1)]
-          }
-          lambda.max <- max(abs(xx[, int] %*% t(xx[, int])/G))
-          lambda.path <- round(exp(seq(log(lambda.max), log(lambda.max * .0001), length.out = 10)), digits = 10)
+          dpca.l <- fnets:::dyn.pca(xx[, int[1:round(G/2)]], q = qq, ic.op = 5)
+          dpca.r <- fnets:::dyn.pca(xx[, int[-(1:round(G/2))]], q = qq, ic.op = 5)
+          
+          spec0 <- dpca.l$spec$Sigma_i[,, 1:(ll + 1)] - dpca.r$spec$Sigma_i[,, 1:(ll + 1)]
+          acv0 <- dpca.l$acv$Gamma_i[,, 1:(ll + 1)] - dpca.r$acv$Gamma_i[,, 1:(ll + 1)]
+          
           ycv <- fnets:::yw.cv(xx[, int], method = 'ds', var.order = d, q = dpca$q, do.plot = !TRUE)
+          lambda.path <- ycv$lambda.path
           mg <- fnets:::make.gg(dpca$acv$Gamma_i, d)
           ive <- fnets:::var.dantzig(mg$GG, mg$gg, ycv$lambda)
           beta <- ive$beta
@@ -86,7 +83,7 @@ for(nn in 1:length(n.seq)){
           # mg <- make.gg(acv - Gamma_c[,,, 1], d)
           # beta <- idio.beta(mg$GG, mg$gg, min(icv$lambda, lambda.path[5]))$beta
           
-          # par(mfrow = c(1, 2)); fields::imagePlot(beta, nlevel = 12, breaks = seq(-.3, .3, length.out = 13)); fields::imagePlot(t(ss$A.list[[1]]), nlevel = 12, breaks = seq(-.3, .3, length.out = 13))
+          # mv <- max(abs(ss$A.list[[1]])); par(mfrow = c(1, 2)); fields::imagePlot(beta, nlevel = 12, breaks = seq(-mv, mv, length.out = 13)); fields::imagePlot(t(ss$A.list[[1]]), nlevel = 12, breaks = seq(-mv, mv, length.out = 13))
           
           diff.Gamma_x <- acv - 
             acv.x(xx[, int + G, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE]
@@ -107,8 +104,8 @@ for(nn in 1:length(n.seq)){
             tt <- tt + 1
           }
           
-          # ts.plot(stat/max(abs(Re(dpca$spec$Sigma_x[,, 1]))))
-          # ts.plot(stat/max(abs(Re(dpca$acv$Gamma_i[,, 1]))))
+          # ts.plot(stat/max(abs(spec0)))
+          # ts.plot(stat/max(abs(acv0)))
           
           idio.out[ii, gg, 1, 1, jj] <- max(stat)/max(abs(spec0))
           idio.out[ii, gg, 2, 1, jj] <- max(stat)/max(abs(acv0))
@@ -118,22 +115,22 @@ for(nn in 1:length(n.seq)){
       }
     }
     
-    save(idio.out, file = paste('idio_new_n', n, 'p', p, 'd', d, 'K', KK, '.RData', sep = ''))
+    save(idio.out, file = paste('idio2_n', n, 'p', p, 'd', d, 'K', KK, '.RData', sep = ''))
     
   }
 }
 
 
 n.seq <- 250 * c(4, 8)
-p.seq <- 25 * c(1, 2, 4)
+p.seq <- 25 * c(2, 4, 6)
 G.seq <- c(1/8, 1/5, 1/4)
 
-n <- n.seq[1]
+n <- n.seq[2]
 p <- p.seq[1]
 
-ll <- 2
+ll <- 1
 d <- c(1, 2)[ll]
-KK <- c(10, 100)[ll]
+KK <- c(1, 100)[ll]
 
 load(file = paste('~/downloads/sim/sim_lanc/idio_new_n', n, 'p', p, 'd', d, 'K', KK, '.RData', sep = ''))
 
@@ -150,15 +147,16 @@ kk <- 1 # c('1', 'beta')
 
 qu <- .95
 
+# out0/out1
 apply(out0[,, jj, kk,], c(2, 3), quantile, qu, TRUE) /
 apply(out1[,, jj, kk,], c(2, 3), quantile, qu, TRUE)
 
+# ma/ar
+apply(out0[,, jj, kk, 1], 2, quantile, qu, TRUE)/apply(out0[,, jj, kk, 2], 2, quantile, qu, TRUE)
+apply(out1[,, jj, kk, 1], 2, quantile, qu, TRUE)/apply(out1[,, jj, kk, 2], 2, quantile, qu, TRUE)
+
 apply(out0[,, jj, kk,], c(2, 3), quantile, qu, TRUE)
 apply(out1[,, jj, kk,], c(2, 3), quantile, qu, TRUE)
-
-apply(out0[,, jj, kk, 1], 2, quantile, qu, TRUE)/apply(out0[,, jj, kk, 2], 2, quantile, qu, TRUE)
-apply(out0[,, jj, kk, 1], 2, quantile, qu, TRUE)/apply(out0[,, jj, kk, 3], 2, quantile, qu, TRUE)
-apply(out0[,, jj, kk, 2], 2, quantile, qu, TRUE)/apply(out0[,, jj, kk, 3], 2, quantile, qu, TRUE)
 
 par(mfcol = c(2, 3))
 for(ll in 1:3){
