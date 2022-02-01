@@ -8,7 +8,7 @@ load("idio_fit0.RData")
 ## idio
 # if est.cp.common = c() and q = 0, it becomes var segmentation
 idio.seg <- function(x, common.seg.out, G.seq = NULL, thr = NULL, d = 1, demean = TRUE,
-                     cv.args = list(path.length = 10, n.folds = 1, do.cv = TRUE), 
+                     cv.args = list(path.length = 10, n.folds = 1, do.cv = TRUE, do.plot = FALSE), 
                      rule = c('eta', 'epsilon'), eta = .5, epsilon = .1){
   
   p <- dim(x)[1]
@@ -29,20 +29,17 @@ idio.seg <- function(x, common.seg.out, G.seq = NULL, thr = NULL, d = 1, demean 
   pcfa <- post.cp.fa(xx, est.cp.common, NULL, 5, lll)
   Gamma_c <- pcfa$Gamma_c[,, 1:(ll + 1),, drop = FALSE]
   
-  if(K >= 1 | is.null(G.seq)){
-    if(sum(pcfa$q.seq > 0)){
+  if(is.null(G.seq)){
+    if(K >= 1 | sum(pcfa$q.seq > 0)){
       G.seq <- round(seq(2.5 * p, n / min(4, n/(3 * p)), length.out = 4))
-      if(is.null(thr) | length(thr) != length(G.seq)){
-        thr <- c()
-        for(ii in 1:length(G.seq)) thr <- c(thr, exp(predict(idio.fit.list[[3]], list(n = n, p = p, G = G.seq[ii]))))
-      }
-    } else{
-      G.seq <- round(seq(2 * p, n / min(5, n/(2 * p)), length.out = 4))
-      if(is.null(thr) | length(thr) != length(G.seq)){
-        thr <- c()
-        for(ii in 1:length(G.seq)) thr <- c(thr, exp(predict(idio.fit.list0[[3]], list(n = n, p = p, G = G.seq[ii]))))
-      }
-    }
+    } else G.seq <- round(seq(2 * p, n / min(5, n/(2 * p)), length.out = 4))
+  }
+  
+  if(is.null(thr) | length(thr) != length(G.seq)){
+    thr <- c()
+    if(K >= 1 | sum(pcfa$q.seq > 0)){
+      for(ii in 1:length(G.seq)) thr <- c(thr, exp(predict(idio.fit.list[[3]], list(n = n, p = p, G = G.seq[ii]))))
+    } else for(ii in 1:length(G.seq)) thr <- c(thr, exp(predict(idio.fit.list0[[3]], list(n = n, p = p, G = G.seq[ii]))))
   }
   
   idio.list <- list()
@@ -61,7 +58,7 @@ idio.seg <- function(x, common.seg.out, G.seq = NULL, thr = NULL, d = 1, demean 
         if(cv.args$do.cv){
           ycv <- fnets:::yw.cv(xx[, int], method = 'ds', var.order = d, 
                                n.folds = cv.args$n.folds, path.length = cv.args$path.length,
-                               q = dpca$q, do.plot = FALSE)
+                               q = dpca$q, do.plot = cv.args$do.plot)
           lambda <- ycv$lambda
         } else{
           lambda.max <- max(abs(xx[, int] %*% t(xx[, int])/G))
