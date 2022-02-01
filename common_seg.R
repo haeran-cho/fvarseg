@@ -38,8 +38,9 @@ common.seg <- function(x, G.seq = NULL, thr = NULL, tt.by = ceiling(log(dim(x)[2
     if(do.check) est.cp <- common.check(xx, G, est.cp, thr[ii], ll, q = NULL, ic.op = 5, agg.over.freq)
     common.list[[ii]]$cp <- est.cp
     
-    if(do.plot) matplot(cts$norm.stat, type = 'l'); abline(v = cp.common, lty = 2, col = 2, lwd = 2); abline(v = cp.idio, lty = 3, col = 6); abline(v = est.cp, col = 4, lty = 3); abline(h = thr[ii], col = 3); lines(cts$stat, col = 4, lwd = 2)
-    
+    if(do.plot){
+      matplot(cts$norm.stat, type = 'l'); abline(v = cp.common, lty = 2, col = 2, lwd = 2); abline(v = cp.idio, lty = 3, col = 6); abline(v = est.cp, col = 4, lty = 3); abline(h = thr[ii], col = 3); lines(cts$stat, col = 4, lwd = 2)
+    }
   }
   
   est.cp <- bottom.up(common.list, eta)
