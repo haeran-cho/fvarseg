@@ -34,13 +34,13 @@ idio.seg <- function(x, common.seg.out, G.seq = NULL, thr = NULL, d = 1, demean 
       G.seq <- round(seq(2.5 * p, n / min(4, n/(3 * p)), length.out = 4))
       if(is.null(thr) | length(thr) != length(G.seq)){
         thr <- c()
-        for(ii in 1:4) thr <- c(thr, exp(predict(idio.fit.list[[3]], list(n = n, p = p, G = G.seq[ii]))))
+        for(ii in 1:length(G.seq)) thr <- c(thr, exp(predict(idio.fit.list[[3]], list(n = n, p = p, G = G.seq[ii]))))
       }
     } else{
       G.seq <- round(seq(2 * p, n / min(5, n/(2 * p)), length.out = 4))
       if(is.null(thr) | length(thr) != length(G.seq)){
         thr <- c()
-        for(ii in 1:4) thr <- c(thr, exp(predict(idio.fit.list0[[3]], list(n = n, p = p, G = G.seq[ii]))))
+        for(ii in 1:length(G.seq)) thr <- c(thr, exp(predict(idio.fit.list0[[3]], list(n = n, p = p, G = G.seq[ii]))))
       }
     }
   }

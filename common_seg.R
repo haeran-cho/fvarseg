@@ -7,10 +7,10 @@ common.seg <- function(x, G.seq = NULL, thr = NULL, tt.by = round(log(dim(x)[2])
   p <- dim(x)[1]
   n <- dim(x)[2]
   
-  if(is.null(G.seq)) G.seq <- round(n * c(1/10, 1/8, 1/6, 1/4))
+  if(is.null(G.seq)) G.seq <- round(n * c(1/10, 1/8, 1/6))
   if(is.null(thr) | length(thr) != length(G.seq)){
     thr <- c()
-    for(ii in 1:4) thr <- c(thr, exp(predict(common.fit.list[[2]], list(n = n, p = p, G = G.seq[ii]))))
+    for(ii in 1:length(G.seq)) thr <- c(thr, exp(predict(common.fit.list[[2]], list(n = n, p = p, G = G.seq[ii]))))
   }
   
   rule <- match.arg(rule, c('eta', 'epsilon'))
