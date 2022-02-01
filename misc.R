@@ -56,27 +56,29 @@ sim.data <- function(n, p, q,
   ## idio commonponent
   
   sig_vep <- toeplitz(.3^(1:p - 1))
-  xi <- vep <- t(mvtnorm::rmvnorm(n + burnin, sigma = sig_vep))
+  vep <- t(mvtnorm::rmvnorm(n + burnin, sigma = sig_vep))
+  xi <- matrix(0, nrow = p, ncol = n)
+  brks <- c(0, cp.idio, n)
 
   A.list <- list()
-  
-  A <- matrix(0, nrow = p, ncol = p)
-  c.A <- .4
-  diag(A) <- c.A
-  A[row(A) + 1 == col(A)] <- - c.A
-  A.list[[1]] <- A
 
-  brks <- c(0, c(cp.idio, n) + burnin)
-
-  for(tt in (brks[1] + 1 + 1):brks[2]) xi[, tt] <- vep[, tt] + A %*% xi[, tt - 1]
-  if(length(cp.idio) >= 1){
-    for(j in 1:length(cp.idio)){
-      A[row(A) + 1 == col(A)] <- - size.idio * A[row(A) + 1 == col(A)]
-      A.list[[j + 1]] <- A
-      for(tt in (brks[j + 1] + 1):brks[j + 2]) xi[, tt] <- vep[, tt] + A %*% xi[, tt - 1]
-    }
+  for(k in 0:length(cp.idio)){
+    tmp <- vep
+    if(k == 0){
+      A <- matrix(0, nrow = p, ncol = p)
+      c.A <- .4
+      diag(A) <- c.A
+      A[row(A) + 1 == col(A)] <- - c.A
+      # A <- A / norm(A, '2') * .7
+    } else if(k >= 1) A[row(A) + 1 == col(A)] <- - size.idio * A[row(A) + 1 == col(A)]
+    for(tt in 2:(n + burnin)) tmp[, tt] <- tmp[, tt] + A %*% tmp[, tt - 1]
+    tmp <- tmp[, -(1:burnin)]
+    xi[, (brks[k + 1] + 1):brks[k + 2]] <- tmp[, (brks[k + 1] + 1):brks[k + 2]]
+    
+    A.list[[k + 1]] <- A
   }
-  x <- xi <- xi[, -(1:burnin)]
+  
+  x <- xi
   
   # A.list <- list()
   # brks <- c(0, cp.idio, n)
@@ -98,7 +100,7 @@ sim.data <- function(n, p, q,
   
 }
 
-sim.data2 <- function(n, p, q =2,  
+sim.data2 <- function(n, p, q = 2,  
                       cp.common = c(), den.common = 1, type.common = c('ma', 'ar')[1], 
                       cp.idio = c(), size.idio = 1, d = 1, 
                       do.scale = TRUE, seed = NULL){
@@ -165,26 +167,26 @@ sim.data2 <- function(n, p, q =2,
 
   burnin <- 100
   prob <- 1/p
+  vep <- matrix(rnorm((n + burnin) * p), nrow = p)
   
   A.list <- list()
   brks <- c(0, cp.idio, n)
   xi <- matrix(0, nrow = p, ncol = n)
   for(k in 0:length(cp.idio)){
-    tmp <- matrix(rnorm((n + burnin) * p), nrow = p)
+    tmp <- vep
     if(k == 0){
       A1 <- A2 <- matrix(0, p, p)
       index <- sample(c(0, 1), p^2, TRUE, prob = c(1 - prob, prob))
-      A1[which(index == 1)] <- .275
+      A1[which(index == 1)] <- .4
       A1 <- A1 / norm(A1, "2")
       if(d == 2){
-        A1 <- A1 * .7
+        A1 <- A1 * .5
         index <- sample(c(0, 1), p^2, TRUE, prob = c(1 - prob, prob))
-        A2[which(index == 1)] <- .275
-        A2 <- A2 / norm(A2, "2") * .3
+        A2[which(index == 1)] <- .4
+        A2 <- A2 / norm(A2, "2") * .5
       }
-    }
-    if(k >= 1){
-      A1 <- - A1; A2 <- - A2
+    } else if(k >= 1){
+      A1 <- - size.idio * A1; A2 <- - size.idio * A2
     }
     for(tt in 3:(n + burnin)) tmp[, tt] <- tmp[, tt] + A1 %*% tmp[, tt - 1] + A2 %*% tmp[, tt - 2]
     tmp <- tmp[, -(1:burnin)]

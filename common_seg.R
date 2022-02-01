@@ -41,7 +41,7 @@ common.seg <- function(x, G.seq, thr = 1.5, tt.by = round(log(dim(x)[2])), q = N
 }
 
 #' @keywords internal
-common.two.step <- function(xx, G, thr, ll, tt.by, agg.over.freq){  
+common.two.step <- function(xx, G, thr, ll, tt.by, agg.over.freq = 'avg'){  
   
   p <- dim(xx)[1]
   n <- dim(xx)[2]
@@ -92,7 +92,7 @@ common.two.step <- function(xx, G, thr, ll, tt.by, agg.over.freq){
     } 
   }
   
-  ls <- list(norm.stat = norm.stat, stat = stat, null.norm = null.norm)
+  ls <- list(norm.stat = norm.stat, stat = stat)
   return(ls)
   
 }
@@ -299,24 +299,17 @@ common.spec.est <- function(xx, q = NULL, ic.op = 5, ll){
 }
 
 #' @keywords internal
-common.check <- function(xx, G, est.cp, thr, ll, q = NULL, ic.op = 5, 
-                         agg.over.freq, null.norm = NULL){
+common.check <- function(xx, G, est.cp, thr, ll, q = NULL, ic.op = 5, agg.over.freq = 'avg'){
   
   p <- dim(xx)[1]; n <- dim(xx)[2]
   
   check <- rep(FALSE, length(est.cp))
   if(length(est.cp) > 0){
-    if(is.null(null.norm)){
-      null.norm <- rep(0, ll + 1)
-      null <- common.spec.est(xx[, 1:G], q, ic.op, ll)$Sigma_c[,, 1:(1 + ll)] - 
-        common.spec.est(xx[, 1:G + G], q, ic.op, ll)$Sigma_c[,, 1:(1 + ll)]
-      for(ii in 1:(ll + 1)) null.norm[ii] <- norm(null[,, ii], type = '2')
-      # null2 <- common.spec.est(xx[, 1:G], q, ic.op, ll)$Sigma_c[,, 1:(1 + ll)]
-      # # null <- (null1 + null2)/2
-      # null.norm <- apply(cbind(apply(abs(null1), 3, norm, type = norm.type),
-      #                        apply(abs(null2), 3, norm, type = norm.type)), 1, max)
-      # if(norm.type %in% c('2', 'f')) null.norm <- null.norm / sqrt(p)
-    }
+    null.norm <- rep(0, ll + 1)
+    null <- common.spec.est(xx[, 1:G], q, ic.op, ll)$Sigma_c[,, 1:(1 + ll)] - 
+      common.spec.est(xx[, 1:G + G], q, ic.op, ll)$Sigma_c[,, 1:(1 + ll)]
+    for(ii in 1:(ll + 1)) null.norm[ii] <- norm(null[,, ii], type = '2')
+    
     for(jj in 1:length(est.cp)){
       cse1 <- common.spec.est(xx[, max(1, est.cp[jj] - G):est.cp[jj]], q, ic.op, ll)
       cse2 <- common.spec.est(xx[, (est.cp[jj] + 1):min(n, est.cp[jj] + G)], q, ic.op, ll)

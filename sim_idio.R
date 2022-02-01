@@ -2,9 +2,8 @@ source("~/Documents/GitHub/favar.segment/common_seg.R")
 source("~/Documents/GitHub/favar.segment/idio_seg.R")
 source("~/Documents/GitHub/favar.segment/misc.R")
 
-n.seq <- 250 * c(4, 8)
+n.seq <- 250 * c(4, 8, 16)
 p.seq <- 25 * c(2, 4, 6)
-G.seq <- c(1/8, 1/5, 1/4)
 q <- 2
 
 d <- 1
@@ -47,8 +46,11 @@ for(nn in 1:length(n.seq)){
         }
         xx <- xx - apply(xx, 1, mean)
         
+        if(jj <= 2) G.seq <- round(seq(2.5 * p, n / min(4, n / (3 * p)), length.out = 4))
+        if(jj == 3) G.seq <- round(seq(2 * p, n / min(5, n / (2.5 * p)), length.out = 4))
+        
         for(gg in 1:3){
-          G <- ceiling(n * G.seq[gg])
+          G <- G.seq[gg]
           
           ll <- max(1, floor(G^(1/3)))
           
@@ -70,18 +72,14 @@ for(nn in 1:length(n.seq)){
           spec0 <- dpca.l$spec$Sigma_i[,, 1:(ll + 1)] - dpca.r$spec$Sigma_i[,, 1:(ll + 1)]
           acv0 <- dpca.l$acv$Gamma_i[,, 1:(ll + 1)] - dpca.r$acv$Gamma_i[,, 1:(ll + 1)]
           
-          ycv <- fnets:::yw.cv(xx[, int], method = 'ds', var.order = d, q = dpca$q, do.plot = !TRUE)
-          lambda.path <- ycv$lambda.path
+          lambda.max <- max(abs(xx[, int] %*% t(xx[, int])/G))
+          lambda.path <- round(exp(seq(log(lambda.max), log(lambda.max * .0001), length.out = 10)), digits = 10)
+          # ycv <- fnets:::yw.cv(xx[, int], method = 'ds', var.order = d, q = dpca$q, do.plot = !TRUE)
+          # lambda.path <- ycv$lambda.path
           mg <- fnets:::make.gg(dpca$acv$Gamma_i, d)
-          ive <- fnets:::var.dantzig(mg$GG, mg$gg, ycv$lambda)
+          ive <- fnets:::var.dantzig(mg$GG, mg$gg, lambda.path[4])
+          # ive <- fnets:::var.dantzig(mg$GG, mg$gg, ycv$lambda)
           beta <- ive$beta
-          
-          # lambda.max <- max(abs(acv0))
-          # lambda.path <- round(exp(seq(log(lambda.max), log(lambda.max * .05), length.out = 10)), digits = 10)
-          # icv <- idio.cv(xx = xx[, int, drop = FALSE], lambda.max = NULL, Gamma_c = Gamma_c, idx = idx[int], var.order = d, path.length = 10, n.folds = 1, do.plot = TRUE)  
-          # acv <- acv.x(xx[, int, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE]
-          # mg <- make.gg(acv - Gamma_c[,,, 1], d)
-          # beta <- idio.beta(mg$GG, mg$gg, min(icv$lambda, lambda.path[5]))$beta
           
           # mv <- max(abs(ss$A.list[[1]])); par(mfrow = c(1, 2)); fields::imagePlot(beta, nlevel = 12, breaks = seq(-mv, mv, length.out = 13)); fields::imagePlot(t(ss$A.list[[1]]), nlevel = 12, breaks = seq(-mv, mv, length.out = 13))
           
@@ -121,31 +119,70 @@ for(nn in 1:length(n.seq)){
 }
 
 
-n.seq <- 250 * c(4, 8)
+n.seq <- 250 * c(4, 8, 16)
 p.seq <- 25 * c(2, 4, 6)
-G.seq <- c(1/8, 1/5, 1/4)
+
+# model
 
 n <- n.seq[2]
-p <- p.seq[1]
+p <- p.seq[2]
+G.seq <- 1:4
+for(ll in 1:2){
+  d <- c(1, 2)[ll]
+  KK <- c(1, 100)[ll]
+  load(file = paste('~/downloads/sim/sim_lanc/idio2_n', n, 'p', p, 'd', d, 'K', KK, '.RData', sep = ''))
 
-ll <- 1
-d <- c(1, 2)[ll]
-KK <- c(1, 100)[ll]
+  dimnames(idio.out)[[5]] <- c('ma', 'ar', 'none')
+  dimnames(idio.out)[[4]] <- c('1', 'beta')
+  dimnames(idio.out)[[3]] <- c('spec', 'acv', 'none')
+  dimnames(idio.out)[[2]] <- G.seq
 
-load(file = paste('~/downloads/sim/sim_lanc/idio_new_n', n, 'p', p, 'd', d, 'K', KK, '.RData', sep = ''))
+  if(ll == 1) out0 <- idio.out
+  if(ll == 2) out1 <- idio.out
+}
 
-dimnames(idio.out)[[5]] <- c('ma', 'ar', 'none')
-dimnames(idio.out)[[4]] <- c('1', 'beta')
-dimnames(idio.out)[[3]] <- c('spec', 'acv', 'none')
-dimnames(idio.out)[[2]] <- round(n * G.seq)
+# sample size
 
-out0 <- idio.out
-out1 <- idio.out
+ll <- 1; d <- c(1, 2)[ll]; KK <- c(1, 100)[ll]
+p <- p.seq[2]
 
-jj <- 1 # c('spec', 'acv', 'lambda')
+for(nn in c(1, 3)){
+  n <- n.seq[nn]
+  load(file = paste('~/downloads/sim/sim_lanc/idio2_n', n, 'p', p, 'd', d, 'K', KK, '.RData', sep = ''))
+  
+  dimnames(idio.out)[[5]] <- c('ma', 'ar', 'none')
+  dimnames(idio.out)[[4]] <- c('1', 'beta')
+  dimnames(idio.out)[[3]] <- c('spec', 'acv', 'none')
+  dimnames(idio.out)[[2]] <- 1:4
+  
+  if(nn == 1) out0 <- idio.out
+  if(nn == 3) out1 <- idio.out
+}
+
+# dimensionality
+
+ll <- 1; d <- c(1, 2)[ll]; KK <- c(1, 100)[ll]
+n <- n.seq[2]
+
+for(pp in c(1, 3)){
+  p <- p.seq[pp]
+  load(file = paste('~/downloads/sim/sim_lanc/idio2_n', n, 'p', p, 'd', d, 'K', KK, '.RData', sep = ''))
+  
+  dimnames(idio.out)[[5]] <- c('ma', 'ar', 'none')
+  dimnames(idio.out)[[4]] <- c('1', 'beta')
+  dimnames(idio.out)[[3]] <- c('spec', 'acv', 'none')
+  dimnames(idio.out)[[2]] <- 1:4
+  
+  if(pp == 1) out0 <- idio.out
+  if(pp == 3) out1 <- idio.out
+}
+
+######################
+
+jj <- 2 # c('spec', 'acv', 'lambda')
 kk <- 1 # c('1', 'beta')
 
-qu <- .95
+qu <- .9
 
 # out0/out1
 apply(out0[,, jj, kk,], c(2, 3), quantile, qu, TRUE) /
@@ -160,7 +197,71 @@ apply(out1[,, jj, kk,], c(2, 3), quantile, qu, TRUE)
 
 par(mfcol = c(2, 3))
 for(ll in 1:3){
-  boxplot(out0[,, jj, kk, ll], main = paste('idio0_n', n, 'p', p, sep = ''), ylim = c(1, 5))
-  boxplot(out1[,, jj, kk, ll], main = paste('idio1_n', n, 'p', p, sep = ''), ylim = c(1, 5))
+  boxplot(out0[,, jj, kk, ll], main = paste('idio0_n', n, 'p', p, sep = ''), ylim = c(0, 3))
+  boxplot(out1[,, jj, kk, ll], main = paste('idio1_n', n, 'p', p, sep = ''), ylim = c(0, 3))
 }
+
+
+######################
+
+n.seq <- 250 * c(4, 8, 16)
+p.seq <- 25 * c(2, 4, 6)
+
+qu <- c(.8, .9, .95)
+yy <- xx <- c()
+for(nn in 1:3){
+  n <- n.seq[nn]
+  for(pp in 1:3){
+    p <- p.seq[pp]
+    G.seq <- sort(round(seq(2 * p, n / min(5, n/(p * 2.5)), length.out = 4)))
+    
+    for(gg in 1:4){
+      G <- G.seq[gg]
+      xx <- rbind(xx, c(n, p, G, d))
+    }
+    
+    out <- c()
+    for(ll in 1:2){
+      d <- c(1, 2)[ll]
+      KK <- c(1, 100)[ll]  
+      load(file = paste('~/downloads/sim/sim_lanc/idio2_n', n, 'p', p, 'd', d, 'K', KK, '.RData', sep = ''))
+      out <- rbind(out, rbind(idio.out[,, 2, 1, 1], idio.out[,, 2, 1, 2]))
+    }
+                   
+    tmp <- c()
+    for(jj in 1:3) tmp <- cbind(tmp, apply(out, 2, quantile, qu[jj], TRUE))
+    yy <- rbind(yy, tmp)
+  }
+}
+
+df <- data.frame(n = xx[, 1], p = xx[, 2], G = xx[, 3], y80 = yy[, 1], y90 = yy[, 2], y95 = yy[, 3])
+
+y <- df$y90
+fit <- lm(log(y) ~ 0 + I(log(log(n))) + I(log(p)) + I(log(G)), data = df)
+fit <- lm(y ~ I((log(n)/G)^(1/3)) + I(1/p), data = df)
+
+summary(fit)
+plot(exp(fitted(fit)), y); abline(a = 0, b = 1, col = 1)
+
+idio.fit.list <- list()
+for(jj in 1:3){
+  if(jj == 1) y <- df$y80
+  if(jj == 2) y <- df$y90
+  if(jj == 3) y <- df$y95
+  fit <- lm(log(y) ~ 0 + I(log(log(n))) + I(log(p)) + I(log(G)), data = df)  
+  idio.fit.list[[jj]] <- fit
+  
+  if(jj == 1){
+    plot(exp(fitted(fit)), y); abline(a = 0, b = 1, col = 1)
+  } else points(exp(fitted(fit)), y, col = jj)
+}
+
+save(idio.fit.list, file = 'idio_fit.RData')
+
+n <- 1000
+G <- 50
+p <- 150
+exp(predict(fit, list(n = n, p = p, G = G)))
+
+
 
