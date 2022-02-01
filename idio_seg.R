@@ -45,8 +45,6 @@ idio.seg <- function(x, common.seg.out, G.seq = NULL, thr = NULL, d = 1, demean 
     }
   }
   
-  attach(cv.args)
-  
   idio.list <- list()
   for(ii in 1:length(G.seq)){
     
@@ -60,9 +58,9 @@ idio.seg <- function(x, common.seg.out, G.seq = NULL, thr = NULL, d = 1, demean 
       int <- (vv - G + 1):vv
       if(do.beta){
         dpca <- fnets:::dyn.pca(xx[, int], ic.op = 5, mm = lll)
-        if(do.cv){
+        if(cv.args$do.cv){
           ycv <- fnets:::yw.cv(xx[, int], method = 'ds', var.order = d, 
-                               n.folds = n.folds, path.length = path.length,
+                               n.folds = cv.args$n.folds, path.length = cv.args$path.length,
                                q = dpca$q, do.plot = FALSE)
           lambda <- ycv$lambda
         } else{
@@ -120,7 +118,7 @@ idio.seg <- function(x, common.seg.out, G.seq = NULL, thr = NULL, d = 1, demean 
         mgd <- make.gg(diff.Gamma_x - diff.Gamma_c, d)
         stat[tt] <- max(abs(mgd$GG %*% beta - mgd$gg)) / null.norm
         
-        if(first & stat[tt] > thr){
+        if(first & stat[tt] > thr[ii]){
           check.theta <- tt
           tt.max <- min(tt.max, check.theta + G - 1)
           check.cp <- c(check.cp, check.theta)
@@ -128,7 +126,7 @@ idio.seg <- function(x, common.seg.out, G.seq = NULL, thr = NULL, d = 1, demean 
         }
         tt <- tt + 1
       }  
-      # ts.plot(stat); abline(h = thr, col = 3); abline(v = check.cp, col = 6); abline(v = cp.idio, col = 2, lty = 3)
+      # ts.plot(stat); abline(h = thr[ii], col = 3); abline(v = check.cp, col = 6); abline(v = cp.idio, col = 2, lty = 3)
       
       if(check.theta < tt.max){
         hat.theta <- (check.theta:tt.max)[which.max(stat[check.theta:tt.max])]
@@ -138,7 +136,7 @@ idio.seg <- function(x, common.seg.out, G.seq = NULL, thr = NULL, d = 1, demean 
           do.beta <- TRUE
         } else if(rule == 'epsilon'){
           int <- max(1, vv, hat.theta - round(epsilon * G.seq[1]) + 1):min(hat.theta + round(epsilon * G.seq[1]), tt.max, n)
-          if(sum(stat[int] < thr) == 0){
+          if(sum(stat[int] < thr[ii]) == 0){
             est.cp <- c(est.cp, hat.theta)
             vv <- hat.theta + G
             do.beta <- TRUE
@@ -149,7 +147,7 @@ idio.seg <- function(x, common.seg.out, G.seq = NULL, thr = NULL, d = 1, demean 
         }
       } else break
     }
-    idio.list[[ii]] <- list(cp = est.cp, norm.stat = stat, G = G, thr = thr, check.cp = check.cp)
+    idio.list[[ii]] <- list(cp = est.cp, norm.stat = stat, G = G, thr = thr[ii], check.cp = check.cp)
   }
   
   est.cp <- bottom.up(idio.list, eta)

@@ -1,13 +1,14 @@
 load("common_fit.RData")
 
-common.seg <- function(x, G.seq = NULL, thr = NULL, tt.by = round(log(dim(x)[2])), demean = TRUE,
+G.seq = NULL; thr = NULL; tt.by = ceiling(log(dim(x)[2])); demean = TRUE; agg.over.freq = c('avg', 'max')[1]; rule = c('eta', 'epsilon')[1]; eta = .5; epsilon = .1; do.check = FALSE
+common.seg <- function(x, G.seq = NULL, thr = NULL, tt.by = ceiling(log(dim(x)[2])), demean = TRUE,
                        agg.over.freq = c('avg', 'max'), 
-                       rule = c('eta', 'epsilon'), eta = .5, epsilon = .1, do.check = FALSE){
+                       rule = c('eta', 'epsilon'), eta = .5, epsilon = .1, do.check = FALSE, do.plot = FALSE){
   
   p <- dim(x)[1]
   n <- dim(x)[2]
   
-  if(is.null(G.seq)) G.seq <- round(n * c(1/10, 1/8, 1/6))
+  if(is.null(G.seq)) G.seq <- round(n * c(1/10, 1/8, 1/6, 1/4))
   if(is.null(thr) | length(thr) != length(G.seq)){
     thr <- c()
     for(ii in 1:length(G.seq)) thr <- c(thr, exp(predict(common.fit.list[[2]], list(n = n, p = p, G = G.seq[ii]))))
@@ -21,10 +22,12 @@ common.seg <- function(x, G.seq = NULL, thr = NULL, tt.by = round(log(dim(x)[2])
   
   common.list <- list()
   ll.seq <- c()
+  
+  if(do.plot) par(mfrow = c(1, length(G.seq)))
 
   for(ii in 1:length(G.seq)){
     G <- G.seq[ii]
-    ll <- max(1, min(floor(4 * (G/log(G))^(1/3)), floor(n/(2 * log(n)))))
+    ll <- max(1, floor(min(G^(1/3), n/(2 * log(n)))))
     ll.seq <- c(ll.seq, ll)
 
     common.list[[ii]] <- cts <- common.two.step(xx, G, thr[ii], ll, tt.by, agg.over.freq)
@@ -35,7 +38,8 @@ common.seg <- function(x, G.seq = NULL, thr = NULL, tt.by = round(log(dim(x)[2])
     est.cp <- common.search.cp(cts, thr[ii], G, rule, eta, epsilon)
     if(do.check) est.cp <- common.check(xx, G, est.cp, thr[ii], ll, q = NULL, ic.op = 5, agg.over.freq)
     common.list[[ii]]$cp <- est.cp
-    # matplot(cts$norm.stat, type = 'l'); abline(v = cp.common, lty = 2, col = 2, lwd = 2); abline(v = cp.idio, lty = 3, col = 6); abline(v = est.cp, col = 4, lty = 3); abline(h = thr[ii], col = 3); lines(cts$stat, col = 4, lwd = 2)
+    
+    if(do.plot) matplot(cts$norm.stat, type = 'l'); abline(v = cp.common, lty = 2, col = 2, lwd = 2); abline(v = cp.idio, lty = 3, col = 6); abline(v = est.cp, col = 4, lty = 3); abline(h = thr[ii], col = 3); lines(cts$stat, col = 4, lwd = 2)
     
   }
   
