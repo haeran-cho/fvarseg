@@ -27,15 +27,15 @@ common.seg <- function(x, G.seq = NULL, thr = NULL, tt.by = round(log(dim(x)[2])
     ll <- max(1, min(floor(4 * (G/log(G))^(1/3)), floor(n/(2 * log(n)))))
     ll.seq <- c(ll.seq, ll)
 
-    common.list[[ii]] <- cts <- common.two.step(xx, G, thr, ll, tt.by, agg.over.freq)
+    common.list[[ii]] <- cts <- common.two.step(xx, G, thr[ii], ll, tt.by, agg.over.freq)
     common.list[[ii]]$G <- G
     common.list[[ii]]$ll <- ll
-    common.list[[ii]]$thr <- thr
+    common.list[[ii]]$thr <- thr[ii]
     
-    est.cp <- common.search.cp(cts, thr, G, rule, eta, epsilon)
-    if(do.check) est.cp <- common.check(xx, G, est.cp, thr, ll, q = NULL, ic.op = 5, agg.over.freq)
+    est.cp <- common.search.cp(cts, thr[ii], G, rule, eta, epsilon)
+    if(do.check) est.cp <- common.check(xx, G, est.cp, thr[ii], ll, q = NULL, ic.op = 5, agg.over.freq)
     common.list[[ii]]$cp <- est.cp
-    # matplot(cts$norm.stat, type = 'l'); abline(v = cp.common, lty = 2, col = 2, lwd = 2); abline(v = cp.idio, lty = 3, col = 6); abline(v = est.cp, col = 4, lty = 3); abline(h = thr, col = 3); lines(cts$stat, col = 4, lwd = 2)
+    # matplot(cts$norm.stat, type = 'l'); abline(v = cp.common, lty = 2, col = 2, lwd = 2); abline(v = cp.idio, lty = 3, col = 6); abline(v = est.cp, col = 4, lty = 3); abline(h = thr[ii], col = 3); lines(cts$stat, col = 4, lwd = 2)
     
   }
   

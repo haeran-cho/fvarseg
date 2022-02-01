@@ -19,13 +19,13 @@ idio.seg <- function(x, common.seg.out, G.seq = NULL, thr = NULL, d = 1, demean 
   
   rule <- match.arg(rule, c('eta', 'epsilon'))
   
-  est.cp.common <- common.seg.out$est.cp
+  est.cp.common <- common.seg.out$est.cp[, 1]
   K <- length(est.cp.common)
   if(K >= 1) est.cp.common <- sort(est.cp.common)
   brks <- c(0, est.cp.common, n)
   idx <- rep(c(1:(length(brks) - 1)), diff(brks))
-  ll <- min(common.seg.out$ll.seq)
   lll <- max(1, 4 * floor((min(diff(brks))/log(min(diff(brks))))^(1/3)))
+  ll <- min(common.seg.out$ll.seq, lll)
   pcfa <- post.cp.fa(xx, est.cp.common, NULL, 5, lll)
   Gamma_c <- pcfa$Gamma_c[,, 1:(ll + 1),, drop = FALSE]
   
