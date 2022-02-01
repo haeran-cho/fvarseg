@@ -2,6 +2,9 @@ library(lpSolve)
 library(foreach)
 library(doParallel)
 
+load("idio_fit.RData")
+load("idio_fit0.RData")
+
 ## idio
 # if est.cp.common = c() and q = 0, it becomes var segmentation
 idio.seg <- function(x, common.seg.out, G.seq = NULL, thr = NULL, d = 1, demean = TRUE,
@@ -18,7 +21,7 @@ idio.seg <- function(x, common.seg.out, G.seq = NULL, thr = NULL, d = 1, demean 
   
   est.cp.common <- common.seg.out$est.cp
   K <- length(est.cp.common)
-  if(K > 0) est.cp.common <- sort(est.cp.common)
+  if(K >= 1) est.cp.common <- sort(est.cp.common)
   brks <- c(0, est.cp.common, n)
   idx <- rep(c(1:(length(brks) - 1)), diff(brks))
   ll <- min(common.seg.out$ll.seq)
@@ -26,7 +29,7 @@ idio.seg <- function(x, common.seg.out, G.seq = NULL, thr = NULL, d = 1, demean 
   pcfa <- post.cp.fa(xx, est.cp.common, NULL, 5, lll)
   Gamma_c <- pcfa$Gamma_c[,, 1:(ll + 1),, drop = FALSE]
   
-  if(is.null(G.seq)){
+  if(K >= 1 | is.null(G.seq)){
     if(sum(pcfa$q.seq > 0)){
       G.seq <- round(seq(2.5 * p, n / min(4, n/(3 * p)), length.out = 4))
       if(is.null(thr) | length(thr) != length(G.seq)){
@@ -35,7 +38,10 @@ idio.seg <- function(x, common.seg.out, G.seq = NULL, thr = NULL, d = 1, demean 
       }
     } else{
       G.seq <- round(seq(2 * p, n / min(5, n/(2 * p)), length.out = 4))
-      if(is.null(thr) | length(thr) != length(G.seq)) thr <- rep(1, 4)
+      if(is.null(thr) | length(thr) != length(G.seq)){
+        thr <- c()
+        for(ii in 1:4) thr <- c(thr, exp(predict(idio.fit.list0[[3]], list(n = n, p = p, G = G.seq[ii]))))
+      }
     }
   }
   
@@ -131,7 +137,7 @@ idio.seg <- function(x, common.seg.out, G.seq = NULL, thr = NULL, d = 1, demean 
           vv <- hat.theta + G
           do.beta <- TRUE
         } else if(rule == 'epsilon'){
-          int <- max(1, hat.theta - round(epsilon * G) + 1):min(hat.theta + round(epsilon * G), n)
+          int <- max(1, vv, hat.theta - round(epsilon * G.seq[1]) + 1):min(hat.theta + round(epsilon * G.seq[1]), tt.max, n)
           if(sum(stat[int] < thr) == 0){
             est.cp <- c(est.cp, hat.theta)
             vv <- hat.theta + G
@@ -289,7 +295,7 @@ post.cp.fa <- function(xx, est.cp.common, q = NULL, ic.op = 5, ll){
       Gamma_c[,,, jj] <- aperm(apply(Sigma_c[,,, jj], c(1, 2), fft, inverse = TRUE), c(2, 3, 1)) * (2 * pi) / (2 * ll + 1)
     } 
   }
-  ls <- list(Sigma_c = Sigma_c, Gamma_c = Re(Gamma_c), q.seq = q.seq)
+  ls <- list(Gamma_c = Re(Gamma_c), q.seq = q.seq)
   
   return(ls)
   

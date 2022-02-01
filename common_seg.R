@@ -1,3 +1,5 @@
+load("common_fit.RData")
+
 common.seg <- function(x, G.seq = NULL, thr = NULL, tt.by = round(log(dim(x)[2])), demean = TRUE,
                        agg.over.freq = c('avg', 'max'), 
                        rule = c('eta', 'epsilon'), eta = .5, epsilon = .1, do.check = FALSE){
@@ -118,7 +120,7 @@ common.search.cp <- function(cts, thr, G, rule, eta = .5, epsilon = .1){
       if(new.stat[hat.theta] >= max(new.stat[int])) est.cp <- c(est.cp, hat.theta)
     }
     if(rule == 'epsilon'){
-      int <- max(1, hat.theta - round(epsilon * G) + 1):min(hat.theta + round(epsilon * G), n)
+      int <- max(1, G, hat.theta - round(epsilon * G) + 1):min(hat.theta + round(epsilon * G), n - G, n)
       if(sum(new.stat[int] < thr) == 0) est.cp <- c(est.cp, hat.theta)
     }
     int <- max(1, hat.theta - G + 1):min(hat.theta + G, n)

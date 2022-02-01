@@ -225,7 +225,8 @@ for(nn in 1:3){
       d <- c(1, 2)[ll]
       KK <- c(1, 100)[ll]  
       load(file = paste('~/downloads/sim/sim_lanc/idio2_n', n, 'p', p, 'd', d, 'K', KK, '.RData', sep = ''))
-      out <- rbind(out, rbind(idio.out[,, 2, 1, 1], idio.out[,, 2, 1, 2]))
+      # out <- rbind(out, rbind(idio.out[,, 2, 1, 1], idio.out[,, 2, 1, 2]))
+      out <- rbind(out, idio.out[,, 2, 1, 3])
     }
                    
     tmp <- c()
@@ -256,7 +257,8 @@ for(jj in 1:3){
   } else points(exp(fitted(fit)), y, col = jj)
 }
 
-save(idio.fit.list, file = 'idio_fit.RData')
+idio.fit.list0 <- idio.fit.list
+save(idio.fit.list0, file = 'idio_fit0.RData')
 
 n <- 1000
 G <- 50
