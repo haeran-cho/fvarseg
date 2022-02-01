@@ -6,7 +6,7 @@ source('common_seg.R')
 source('misc.R')
 
 n <- 2000
-p <- 100
+p <- 50
 q <- 2
 cp.common <- round(n * 1:2/3)
 cp.idio <- round(n * 1:3/4)
@@ -35,7 +35,7 @@ is <- idio.seg(x, common.seg.out = cs, G.seq = NULL, thr = NULL, d = d, demean =
                rule = c('eta', 'epsilon')[1], eta = .5, epsilon = .1)
 is$est.cp  
 
-rr <- 1
-ts.plot(is$est.cp.list[[rr]]$norm.stat); abline(h = is$est.cp.list[[rr]]$thr, col = 4)
-abline(v = cp.idio, col = 2, lty = 3); abline(v = is$est.cp.list[[rr]]$cp, col = 4, lty = 2)
-
+for(rr in 1:4){
+  ts.plot(is$est.cp.list[[rr]]$norm.stat); abline(h = is$est.cp.list[[rr]]$thr, col = 4)
+  abline(v = cp.idio, col = 2, lty = 3); abline(v = is$est.cp.list[[rr]]$cp, col = 4, lty = 2)
+}
