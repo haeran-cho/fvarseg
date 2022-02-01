@@ -1,9 +1,15 @@
-common.seg <- function(x, G.seq, thr = 1.5, tt.by = round(log(dim(x)[2])), q = NULL, ic.op = 5, demean = TRUE,
+common.seg <- function(x, G.seq = NULL, thr = NULL, tt.by = round(log(dim(x)[2])), demean = TRUE,
                        agg.over.freq = c('avg', 'max'), 
                        rule = c('eta', 'epsilon'), eta = .5, epsilon = .1, do.check = FALSE){
   
   p <- dim(x)[1]
   n <- dim(x)[2]
+  
+  if(is.null(G.seq)) G.seq <- round(n * c(1/10, 1/8, 1/6, 1/4))
+  if(is.null(thr) | length(thr) != length(G.seq)){
+    thr <- c()
+    for(ii in 1:4) thr <- c(thr, exp(predict(common.fit.list[[2]], list(n = n, p = p, G = G.seq[ii]))))
+  }
   
   rule <- match.arg(rule, c('eta', 'epsilon'))
   agg.over.freq <- match.arg(agg.over.freq, c('avg', 'max'))
@@ -18,15 +24,14 @@ common.seg <- function(x, G.seq, thr = 1.5, tt.by = round(log(dim(x)[2])), q = N
     G <- G.seq[ii]
     ll <- max(1, min(floor(4 * (G/log(G))^(1/3)), floor(n/(2 * log(n)))))
     ll.seq <- c(ll.seq, ll)
-    # thr <- thr.const * p * max(sqrt(ll * log(n)/G), 1/ll, 1/p)
-    
+
     common.list[[ii]] <- cts <- common.two.step(xx, G, thr, ll, tt.by, agg.over.freq)
     common.list[[ii]]$G <- G
     common.list[[ii]]$ll <- ll
     common.list[[ii]]$thr <- thr
     
     est.cp <- common.search.cp(cts, thr, G, rule, eta, epsilon)
-    if(do.check) est.cp <- common.check(xx, G, est.cp, thr, ll, q, ic.op, agg.over.freq)
+    if(do.check) est.cp <- common.check(xx, G, est.cp, thr, ll, q = NULL, ic.op = 5, agg.over.freq)
     common.list[[ii]]$cp <- est.cp
     # matplot(cts$norm.stat, type = 'l'); abline(v = cp.common, lty = 2, col = 2, lwd = 2); abline(v = cp.idio, lty = 3, col = 6); abline(v = est.cp, col = 4, lty = 3); abline(h = thr, col = 3); lines(cts$stat, col = 4, lwd = 2)
     

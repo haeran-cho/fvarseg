@@ -4,13 +4,15 @@ library(doParallel)
 
 ## idio
 # if est.cp.common = c() and q = 0, it becomes var segmentation
-idio.seg <- function(x, G.seq, d = 1, thr = 4, demean = TRUE,
-                     common.seg.out, q = NULL, ic.op = 5,
-                     path.length = 10, n.folds = 1, 
+idio.seg <- function(x, common.seg.out, G.seq = NULL, thr = NULL, d = 1, demean = TRUE,
+                     cv.args = list(path.length = 10, n.folds = 1, do.cv = TRUE), 
                      rule = c('eta', 'epsilon'), eta = .5, epsilon = .1){
   
   p <- dim(x)[1]
   n <- dim(x)[2]
+  
+  if(demean) mean.x <- apply(x, 1, mean) else mean.x <- rep(0, p)
+  xx <- x - mean.x
   
   rule <- match.arg(rule, c('eta', 'epsilon'))
   
@@ -19,22 +21,30 @@ idio.seg <- function(x, G.seq, d = 1, thr = 4, demean = TRUE,
   if(K > 0) est.cp.common <- sort(est.cp.common)
   brks <- c(0, est.cp.common, n)
   idx <- rep(c(1:(length(brks) - 1)), diff(brks))
-  
   ll <- min(common.seg.out$ll.seq)
-  
-  if(demean) mean.x <- apply(x, 1, mean) else mean.x <- rep(0, p)
-  xx <- x - mean.x
-  
-  pcfa <- post.cp.fa(xx, est.cp.common, q, ic.op, 
-                     max(1, 4 * floor((min(diff(brks))/log(min(diff(brks))))^(1/3))))
+  lll <- max(1, 4 * floor((min(diff(brks))/log(min(diff(brks))))^(1/3)))
+  pcfa <- post.cp.fa(xx, est.cp.common, NULL, 5, lll)
   Gamma_c <- pcfa$Gamma_c[,, 1:(ll + 1),, drop = FALSE]
-
-  idio.list <- list()
   
+  if(is.null(G.seq)){
+    if(sum(pcfa$q.seq > 0)){
+      G.seq <- round(seq(2.5 * p, n / min(4, n/(3 * p)), length.out = 4))
+      if(is.null(thr) | length(thr) != length(G.seq)){
+        thr <- c()
+        for(ii in 1:4) thr <- c(thr, exp(predict(idio.fit.list[[3]], list(n = n, p = p, G = G.seq[ii]))))
+      }
+    } else{
+      G.seq <- round(seq(2 * p, n / min(5, n/(2 * p)), length.out = 4))
+      if(is.null(thr) | length(thr) != length(G.seq)) thr <- rep(1, 4)
+    }
+  }
+  
+  attach(cv.args)
+  
+  idio.list <- list()
   for(ii in 1:length(G.seq)){
     
     G <- G.seq[ii]
-    # thr <- thr.const * max(sqrt(ll * log(n * p) / G), 1/ll, 1/sqrt(p))
     vv <- G
     stat <- rep(0, n)
     check.cp <- est.cp <- c()
@@ -43,21 +53,40 @@ idio.seg <- function(x, G.seq, d = 1, thr = 4, demean = TRUE,
     while(vv <= n - G){
       int <- (vv - G + 1):vv
       if(do.beta){
-        icv <- idio.cv(xx = xx[, int, drop = FALSE], Gamma_c = Gamma_c, idx = idx[int], var.order = d, 
-                       path.length = path.length, n.folds = n.folds)  
-        tb <- tabulate(idx[int], nbins = K + 1)
-        acv <- acv.x(xx[, int, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE]
-        for(kk in 1:(K + 1)) acv <- acv - tb[kk] / G * Gamma_c[,,, kk]
-        mg <- make.gg(acv, d)
-        beta <- idio.beta(mg$GG, mg$gg, icv$lambda)$beta
-        null.norm <- max(abs(mg$GG %*% beta - mg$gg))
+        dpca <- fnets:::dyn.pca(xx[, int], ic.op = 5, mm = lll)
+        if(do.cv){
+          ycv <- fnets:::yw.cv(xx[, int], method = 'ds', var.order = d, 
+                               n.folds = n.folds, path.length = path.length,
+                               q = dpca$q, do.plot = FALSE)
+          lambda <- ycv$lambda
+        } else{
+          lambda.max <- max(abs(xx[, int] %*% t(xx[, int])/G))
+          lambda <- round(exp(seq(log(lambda.max), log(lambda.max * .0001), length.out = 10)),
+                          digits = 10)[4]
+        }
+        mg <- fnets:::make.gg(dpca$acv$Gamma_i, d)
+        ive <- fnets:::var.dantzig(mg$GG, mg$gg, lambda)
+        beta <- ive$beta
+        
+        dpca.l <- fnets:::dyn.pca(xx[, int[1:round(G/2)]], q = dpca$q, ic.op = 5, mm = ll)
+        dpca.r <- fnets:::dyn.pca(xx[, int[-(1:round(G/2))]], q = dpca$q, ic.op = 5, mm = ll)
+        dgi <- dpca.l$acv$Gamma_i[,, 1:(ll + 1)] - dpca.r$acv$Gamma_i[,, 1:(ll + 1)]
+        null.norm <- max(abs(dgi))
+        
+        # icv <- idio.cv(xx = xx[, int, drop = FALSE], Gamma_c = Gamma_c, idx = idx[int], var.order = d, 
+        #                path.length = path.length, n.folds = n.folds)  
+        # tb <- tabulate(idx[int], nbins = K + 1)
+        # acv <- acv.x(xx[, int, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE]
+        # for(kk in 1:(K + 1)) acv <- acv - tb[kk] / G * Gamma_c[,,, kk]
+        # mg <- make.gg(acv, d)
+        # beta <- idio.beta(mg$GG, mg$gg, icv$lambda)$beta
       }
       
-      diff.Gamma_x <- acv.x(xx[, int, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE] - 
+      diff.Gamma_x <- acv.x(xx[, int, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE] -
         acv.x(xx[, int + G, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE]
       diff.Gamma_c <- diff.Gamma_x * 0
       if(K > 0){
-        common.weights <- tabulate(idx[int], nbins = K + 1) - 
+        common.weights <- tabulate(idx[int], nbins = K + 1) -
           tabulate(idx[int + G], nbins = K + 1)
         for(kk in 1:(K + 1)) diff.Gamma_c <- diff.Gamma_c + common.weights[kk] / G * Gamma_c[,,, kk]
       }

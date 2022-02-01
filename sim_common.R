@@ -157,10 +157,10 @@ for(nn in 1:3){
 
 df <- data.frame(n = xx[, 1], p = xx[, 2], G = xx[, 3], y80 = yy[, 1], y90 = yy[, 2], y95 = yy[, 3])
 
-plot(xx[, 4], yy[, 1])
+plot(xx[, 3], yy[, 1])
 
 y <- df$y90
-fit <- lm(log(y) ~ I(log(log(n))) + I(log(G)), data = df)
+fit <- lm(log(y) ~ 0 + I(log(log(n))) + I(log(G)), data = df)
 fit <- lm(log(y) ~ I(log(log(n)) - log(G)) + I(log(p)), data = df)
 fit <- lm(y ~ I((log(n)/G)^(2/3)) + I(1/p), data = df)
 
@@ -174,7 +174,7 @@ for(jj in 1:3){
   if(jj == 1) y <- df$y80
   if(jj == 2) y <- df$y90
   if(jj == 3) y <- df$y95
-  fit <- lm(log(y) ~ I(log(log(n))) + I(log(G)), data = df)
+  fit <- lm(log(y) ~ 0 + I(log(log(n))) + I(log(G)), data = df)
   common.fit.list[[jj]] <- fit
   
   if(jj == 1){
