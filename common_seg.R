@@ -1,6 +1,5 @@
 load("common_fit.RData")
 
-G.seq = NULL; thr = NULL; tt.by = ceiling(log(dim(x)[2])); demean = TRUE; agg.over.freq = c('avg', 'max')[1]; rule = c('eta', 'epsilon')[1]; eta = .5; epsilon = .1; do.check = FALSE
 common.seg <- function(x, G.seq = NULL, thr = NULL, tt.by = ceiling(log(dim(x)[2])), demean = TRUE,
                        agg.over.freq = c('avg', 'max'), 
                        rule = c('eta', 'epsilon'), eta = .5, epsilon = .1, do.check = FALSE, do.plot = FALSE){

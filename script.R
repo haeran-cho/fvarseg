@@ -1,8 +1,9 @@
 devtools::install_github("https://github.com/Dom-Owens-UoB/fnets")
 
-source('~/Documents/GitHub/fnets.segment/idio_seg.R')
-source('~/Documents/GitHub/fnets.segment/common_seg.R')
-source('~/Documents/GitHub/fnets.segment/misc.R')
+setwd("~/Documents/GitHub/fnets.segment")
+source('idio_seg.R')
+source('common_seg.R')
+source('misc.R')
 
 n <- 2000
 p <- 100
