@@ -1,6 +1,8 @@
 load("common_fit.RData")
 
-common.seg <- function(x, G.seq = NULL, thr = NULL, tt.by = ceiling(log(dim(x)[2])), demean = TRUE,
+COMMON_INDEX <- 1
+
+common.seg <- function(x, G.seq = NULL, thr = NULL, tt.by = floor(log(dim(x)[2])^2), demean = TRUE,
                        agg.over.freq = c('avg', 'max'), 
                        rule = c('eta', 'epsilon'), eta = .5, epsilon = .1, do.check = FALSE, do.plot = FALSE){
   
@@ -10,7 +12,7 @@ common.seg <- function(x, G.seq = NULL, thr = NULL, tt.by = ceiling(log(dim(x)[2
   if(is.null(G.seq)) G.seq <- round(n * c(1/10, 1/8, 1/6, 1/4))
   if(is.null(thr) | length(thr) != length(G.seq)){
     thr <- c()
-    for(ii in 1:length(G.seq)) thr <- c(thr, exp(predict(common.fit.list[[2]], list(n = n, p = p, G = G.seq[ii]))))
+    for(ii in 1:length(G.seq)) thr <- c(thr, exp(predict(common.fit.list[[COMMON_INDEX]], list(n = n, p = p, G = G.seq[ii]))))
   }
   
   rule <- match.arg(rule, c('eta', 'epsilon'))

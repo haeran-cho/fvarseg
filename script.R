@@ -6,23 +6,27 @@ source('common_seg.R')
 source('misc.R')
 
 n <- 2000
-p <- 50
+p <- 100
 q <- 2
-cp.common <- round(n * 1:2/3)
-cp.idio <- round(n * 1:3/4)
 d <- 1
 
+cp.common <- c()
+cp.common <- round(n * 1:2/3)
+
+cp.idio <- c()
+cp.idio <- round(n * 1:3/4)
+
 ss <- sim.data2(n, p, q,
-                cp.common = cp.common, den.common = .5, type.common = c('ma', 'ar')[2],
+                cp.common = cp.common, den.common = 1, type.common = c('ma', 'ar')[2],
                 cp.idio = cp.idio, size.idio = 1, d = d, do.scale = !FALSE)
 x <- ss$x
 
 x <- ss$xi
 
 # if common != 0
-cs <- common.seg(x, G.seq = NULL, thr = NULL, tt.by = round(log(dim(x)[2])), 
+cs <- common.seg(x, G.seq = NULL, thr = NULL, tt.by = round(log(dim(x)[2])^2), 
                  demean = TRUE, agg.over.freq = c('avg', 'max')[1], 
-                 rule = c('eta', 'epsilon')[1], eta = .5, epsilon = .1, do.check = FALSE, do.plot = !FALSE)
+                 rule = c('eta', 'epsilon')[2], eta = .5, epsilon = .1, do.check = FALSE, do.plot = !FALSE)
 cs$est.cp
 
 # if we know common = 0, to compare against VARDetect

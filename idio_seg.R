@@ -5,9 +5,11 @@ library(doParallel)
 load("idio_fit.RData")
 load("idio_fit0.RData")
 
+IDIO_INDEX <- 3
+
 ## idio
 # if est.cp.common = c() and q = 0, it becomes var segmentation
-idio.seg <- function(x, common.seg.out, G.seq = NULL, thr = NULL, d = 1, demean = TRUE,
+idio.seg <- function(x, common.seg.out, d = 1, G.seq = NULL, thr = NULL, demean = TRUE,
                      cv.args = list(path.length = 10, n.folds = 1, do.cv = TRUE, do.plot = FALSE), 
                      rule = c('eta', 'epsilon'), eta = .5, epsilon = .1){
   
@@ -38,8 +40,8 @@ idio.seg <- function(x, common.seg.out, G.seq = NULL, thr = NULL, d = 1, demean 
   if(is.null(thr) | length(thr) != length(G.seq)){
     thr <- c()
     if(K >= 1 | sum(pcfa$q.seq > 0)){
-      for(ii in 1:length(G.seq)) thr <- c(thr, exp(predict(idio.fit.list[[3]], list(n = n, p = p, G = G.seq[ii]))))
-    } else for(ii in 1:length(G.seq)) thr <- c(thr, exp(predict(idio.fit.list0[[3]], list(n = n, p = p, G = G.seq[ii]))))
+      for(ii in 1:length(G.seq)) thr <- c(thr, exp(predict(idio.fit.list[[IDIO_INDEX]], list(n = n, p = p, G = G.seq[ii]))))
+    } else for(ii in 1:length(G.seq)) thr <- c(thr, exp(predict(idio.fit.list0[[IDIO_INDEX]], list(n = n, p = p, G = G.seq[ii]))))
   }
   
   idio.list <- list()
