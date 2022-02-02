@@ -265,7 +265,7 @@ post.cp.fa <- function(xx, est.cp.common, q = NULL, ic.op = 5, ll){
     nn <- length(int)
     if(!is.null(q)){
       qq <- as.integer(q)
-      ax <- acv.x(xx, ll, w)
+      ax <- acv.x(xx[, int, drop = FALSE], ll, w)
       Gamma_x <- ax$Gamma_x
       Gamma_xw <- ax$Gamma_xw
       Sigma_x <- aperm(apply(Gamma_xw, c(1, 2), fft), c(2, 3, 1)) / (2 * pi)  
@@ -292,7 +292,7 @@ post.cp.fa <- function(xx, est.cp.common, q = NULL, ic.op = 5, ll){
       Gamma_c[,,, jj] <- aperm(apply(Sigma_c[,,, jj], c(1, 2), fft, inverse = TRUE), c(2, 3, 1)) * (2 * pi) / (2 * ll + 1)
     } 
   }
-  ls <- list(Gamma_c = Re(Gamma_c), q.seq = q.seq)
+  ls <- list(Sigma_c = Sigma_c, Gamma_c = Re(Gamma_c), q.seq = q.seq)
   
   return(ls)
   

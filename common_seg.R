@@ -24,7 +24,7 @@ common.seg <- function(x, G.seq = NULL, thr = NULL, tt.by = floor(log(dim(x)[2])
   common.list <- list()
   ll.seq <- c()
   
-  if(do.plot) par(mfrow = c(1, length(G.seq)))
+  if(do.plot) par(mfrow = c(2, ceiling(length(G.seq)/2)))
 
   for(ii in 1:length(G.seq)){
     G <- G.seq[ii]
@@ -105,7 +105,7 @@ common.two.step <- function(xx, G, thr, ll, tt.by, agg.over.freq = 'avg'){
     } 
   }
   
-  ls <- list(norm.stat = norm.stat, stat = stat)
+  ls <- list(norm.stat = norm.stat, stat = stat, null.norm = null.norm)
   return(ls)
   
 }

@@ -17,19 +17,31 @@ cp.idio <- c()
 cp.idio <- round(n * 1:3/4)
 
 ss <- sim.data2(n, p, q,
-                cp.common = cp.common, den.common = 1, type.common = c('ma', 'ar')[2],
-                cp.idio = cp.idio, size.idio = 1, d = d, do.scale = !FALSE)
+                cp.common = cp.common, den.common = .5, type.common = c('ma', 'ar')[2],
+                cp.idio = cp.idio, size.idio = 1, d = d, do.scale = !FALSE, seed = 1211)
 x <- ss$x
 
 x <- ss$xi
+
+pcf0 <- post.cp.fa((ss$x - 0 * ss$xi)[, 1:(2*cs$G.seq[2])], cs$G.seq[2], q = q, ic.op = 5, cs$ll.seq[1])
+pcf <- post.cp.fa((ss$x - 0 * ss$xi), cp.common, q = q, ic.op = 5, cs$ll.seq[1])
+norm(pcf$Sigma_c[,, 2, 1] - pcf$Sigma_c[,, 2, 2], '2') / norm(pcf0$Sigma_c[,, 2, 1] - pcf0$Sigma_c[,, 2, 2], '2')
+norm(pcf$Sigma_c[,, 2, 2] - pcf$Sigma_c[,, 2, 3], '2') / norm(pcf0$Sigma_c[,, 2, 1] - pcf0$Sigma_c[,, 2, 2], '2')
 
 # if common != 0
 cs <- common.seg(x, G.seq = NULL, thr = NULL, tt.by = round(log(dim(x)[2])^2), 
                  demean = TRUE, agg.over.freq = c('avg', 'max')[1], 
                  rule = c('eta', 'epsilon')[2], eta = .5, epsilon = .1, do.check = FALSE, do.plot = !FALSE)
 cs$est.cp
+cs$est.cp.list[[1]]$null.norm
 
-# if we know common = 0, to compare against VARDetect
+cs0 <- common.seg(ss$x - ss$xi, G.seq = NULL, thr = NULL, tt.by = round(log(dim(x)[2])^2), 
+                 demean = TRUE, agg.over.freq = c('avg', 'max')[1], 
+                 rule = c('eta', 'epsilon')[2], eta = .5, epsilon = .1, do.check = FALSE, do.plot = !FALSE)
+cs0$est.cp
+cs0$est.cp.list[[1]]$null.norm
+
+ # if we know common = 0, to compare against VARDetect
 cs <- list(est.cp = c(), 
            ll.seq = max(1, floor(min((n/10)^(1/3), n/(2 * log(n)))))) 
 
