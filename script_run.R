@@ -48,7 +48,7 @@ for(S in 1:dim(sim.list)[1]){
     is <- idio.seg(x, common.seg.out = cs, G.seq = NULL, thr = NULL, d = d, demean = TRUE,
                    cv.args = list(path.length = 10, n.folds = 1, do.cv = FALSE, do.plot = !FALSE), 
                    rule = c('eta', 'epsilon')[1], eta = .5, epsilon = .1)
-    est.cp.idio[[i]] <- is$est.cp  
+    est.cp.idio[[i]] <- is$est.cp[, 1]  
     
     for(rr in 1:4){
       ts.plot(is$est.cp.list[[rr]]$norm.stat); abline(h = is$est.cp.list[[rr]]$thr, col = 4)
