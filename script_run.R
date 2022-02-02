@@ -1,7 +1,6 @@
 devtools::install_github("https://github.com/Dom-Owens-UoB/fnets")
 
 setwd("~/Documents/GitHub/fnets.segment")
-#setwd("/Volumes/Seagate Expansion Drive/Current.projects/with_Haeran/Rcode/new_Haeran_ver4")
 source('idio_seg.R')
 source('common_seg.R')
 source('misc.R')
@@ -11,14 +10,14 @@ n <- 2000
 d <- 1
 q <- 2
 
-############################### MODELS ##############################
+##### models 
 sim.list = expand.grid(structure(list( cp.idio = list(c(NULL), c(round(n * 1:2/3))), p = c(50, 100, 150), cp.common= list(c(round(n * 1:2/3)), c(round(n * 1:3/4))), 
                                        type.common = c("ma", "ar"))))
 cp.idio = vector("list", 24); for(i in c(seq(2, 6, by=2), seq(14, 18, by=2))){ cp.idio[[i]] <- c(round(n * 1:2/3)); cp.idio[[i+6]] <- c(round(n * c(3,5)/8))}
 sim.list$cp.idio = cp.idio
 sim.list
 
-
+##### simulations
 for(S in 1:dim(sim.list)[1]){
   
   cp.idio = c(sim.list[S,][1], recursive=T, use.names=F)
@@ -55,7 +54,7 @@ for(S in 1:dim(sim.list)[1]){
       abline(v = cp.idio, col = 2, lty = 3); abline(v = is$est.cp.list[[rr]]$cp, col = 4, lty = 2)
     }
     
-    print(paste("model", S, "- run", i))
+    cat("model", S, " / run", i, " / est.cp.com: ", sapply(est.cp.com[[i]], paste, collapse=' '), " / est.cp.idio: ", sapply(est.cp.idio[[i]], paste, collapse=' ') )
     
   }
   
