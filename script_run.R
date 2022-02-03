@@ -1,11 +1,13 @@
 devtools::install_github("https://github.com/Dom-Owens-UoB/fnets")
 
 setwd("~/Documents/GitHub/fnets.segment")
+#setwd("~/gdfm_new")
+
 source('idio_seg.R')
 source('common_seg.R')
 source('misc.R')
 
-N <- 100
+N <- 10
 n <- 2000
 d <- 1
 q <- 2
@@ -40,13 +42,13 @@ for(S in 1:dim(sim.list)[1]){
     ### 2) common component 
     cs <- common.seg(x, G.seq = NULL, thr = NULL, tt.by = round(log(dim(x)[2])^2), 
                      demean = TRUE, agg.over.freq = c('avg', 'max')[1], 
-                     rule = c('eta', 'epsilon')[2], eta = .5, epsilon = .1, do.check = FALSE, do.plot = !FALSE)
+                     rule = c('eta', 'epsilon')[1], eta = .5, epsilon = .1, do.check = FALSE, do.plot = !FALSE)
     est.cp.com[[i]] <- cs$est.cp[, 1]
   
     ### 3) idiosyncratic component 
     is <- idio.seg(x, common.seg.out = cs, G.seq = NULL, thr = NULL, d = d, demean = TRUE,
                    cv.args = list(path.length = 10, n.folds = 1, do.cv = FALSE, do.plot = !FALSE), 
-                   rule = c('eta', 'epsilon')[1], eta = .5, epsilon = .1)
+                   rule = c('eta', 'epsilon')[2], eta = .5, epsilon = .1)
     est.cp.idio[[i]] <- is$est.cp[, 1]  
     
     for(rr in 1:4){
@@ -55,13 +57,10 @@ for(S in 1:dim(sim.list)[1]){
     }
     
     cat("model", S, " / run", i, " / est.cp.com: ", sapply(est.cp.com[[i]], paste, collapse=' '), " / est.cp.idio: ", sapply(est.cp.idio[[i]], paste, collapse=' ') )
-    
+    cat("\n")
   }
   
   result <- list(est.cp.com = est.cp.com, est.cp.idio = est.cp.idio, cp.common = cp.common, cp.idio = cp.idio, n = n)
-  save(result, file=paste0("S", S, ".RData", sep = ""))
+  save(result, file=paste0("S", S, "_N", N, ".RData", sep = ""))
   
 }
-
-
-
