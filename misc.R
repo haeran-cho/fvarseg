@@ -166,7 +166,7 @@ sim.data2 <- function(n, p, q = 2,
   ## idio component
 
   burnin <- 100
-  prob <- 1/p
+  prob <- 2/p
   vep <- matrix(rnorm((n + burnin) * p), nrow = p)
   
   A.list <- list()
