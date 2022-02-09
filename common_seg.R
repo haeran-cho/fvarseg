@@ -1,6 +1,6 @@
 load("common_fit.RData")
 
-COMMON_INDEX <- 1
+COMMON_INDEX <- 2
 
 common.seg <- function(x, G.seq = NULL, thr = NULL, tt.by = floor(log(dim(x)[2])^2), demean = TRUE,
                        agg.over.freq = c('avg', 'max'), 

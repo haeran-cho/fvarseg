@@ -182,7 +182,7 @@ for(pp in c(1, 3)){
 jj <- 2 # c('spec', 'acv', 'lambda')
 kk <- 1 # c('1', 'beta')
 
-qu <- .9
+qu <- .95
 
 # out0/out1
 apply(out0[,, jj, kk,], c(2, 3), quantile, qu, TRUE) /
@@ -201,19 +201,29 @@ for(ll in 1:3){
   boxplot(out1[,, jj, kk, ll], main = paste('idio1_n', n, 'p', p, sep = ''), ylim = c(0, 3))
 }
 
+load('idio_fit.RData')
+
+n <- 2000
+p <- 100
+G <- round(seq(2.5 * p, n / min(4, n / (3 * p)), length = 4))[3]
+exp(predict(idio.fit.list[[3]], list(n = n, p = p, G = G)))
+exp(predict(fit, list(n = n, p = p, G = G)))
 
 ######################
 
 n.seq <- 250 * c(4, 8, 16)
 p.seq <- 25 * c(2, 4, 6)
 
-qu <- c(.8, .9, .95)
+kk <- 1
+
+qu <- c(.9, .95, .99)
 yy <- xx <- c()
 for(nn in 1:3){
   n <- n.seq[nn]
   for(pp in 1:3){
     p <- p.seq[pp]
-    G.seq <- sort(round(seq(2 * p, n / min(5, n/(p * 2.5)), length.out = 4)))
+    if(kk == 1) G.seq <- sort(round(seq(2 * p, n / min(5, n/(p * 2.5)), length.out = 4)))
+    if(kk == 2) G.seq <- sort(round(seq(2.5 * p, n / min(5, n/(p * 3)), length.out = 4)))
     
     for(gg in 1:4){
       G <- G.seq[gg]
@@ -225,8 +235,8 @@ for(nn in 1:3){
       d <- c(1, 2)[ll]
       KK <- c(1, 100)[ll]  
       load(file = paste('~/downloads/sim/sim_lanc/idio2_n', n, 'p', p, 'd', d, 'K', KK, '.RData', sep = ''))
-      # out <- rbind(out, rbind(idio.out[,, 2, 1, 1], idio.out[,, 2, 1, 2]))
-      out <- rbind(out, idio.out[,, 2, 1, 3])
+      if(kk == 1) out <- rbind(out, rbind(idio.out[,, 2, 1, 2]))
+      if(kk == 2) out <- rbind(out, idio.out[,, 2, 1, 3])
     }
                    
     tmp <- c()
