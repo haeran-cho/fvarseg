@@ -587,8 +587,8 @@ finding.dH <- function(chp, true.chp, T){
   d <- abs(matrix(rep(est.pnts, length(true.pnts)), nrow=length(est.pnts))-
              matrix(rep(true.pnts, length(est.pnts)), nrow=length(est.pnts), byrow=T))
   
-  D1 <- max(apply(d, 2, min)) * 100 / T
-  D2 <- max(apply(d, 1, min)) * 100 / T
+  D1 <- max(apply(d, 2, min)) / T
+  D2 <- max(apply(d, 1, min)) / T
   
   dH <- mean((abs(D1-D2) + D1 + D2)/2)
   
