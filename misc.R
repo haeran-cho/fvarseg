@@ -61,10 +61,13 @@ sim.data0 <- function(n, p, q,
     
   } else chi <- matrix(0, nrow = p, ncol = n)
   
-  ## idio commonponent
   
+  
+  ## idio component
+  
+  burnin <- 100
   prob <- 1/p
-  #prob <- 2/p
+  #prob <- 3/p
   vep <- matrix(rnorm((n + burnin) * p), nrow = p)
   
   A.list <- list()
@@ -101,7 +104,10 @@ sim.data0 <- function(n, p, q,
   out <- list(x = x, xi = xi, A.list = A.list)
   return(out)
   
+  
+  
 }
+
 
 sim.data <- function(n, p, q,  
                      cp.common = c(), den.common = 1, type.common = c('ma', 'ar')[1], ma.order = 0,
