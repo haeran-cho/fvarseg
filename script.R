@@ -1,41 +1,46 @@
 devtools::install_github("https://github.com/Dom-Owens-UoB/fnets")
 
+library(VARDetect)
+
 setwd("~/Documents/GitHub/fnets.segment")
 source('idio_seg.R')
 source('common_seg.R')
 source('misc.R')
 
 n <- 2000
-p <- 100
-q <- 2
-d <- 1
+p <- 50
+q <- 0
+d <- 2
 
 cp.common <- c()
-cp.common <- round(n * 1:2/3)
+cp.common <- round(n * 1:3/4)
 
 cp.idio <- c()
-cp.idio <- round(n * 1:2/3)
+cp.idio <- round(n * 1:3/4)
 
 ss <- sim.data2(n, p, q,
                 cp.common = cp.common, den.common = .7, type.common = c('ma', 'ar')[2],
-                cp.idio = cp.idio, size.idio = 1, d = d, do.scale = !FALSE, seed = NULL)
+                cp.idio = cp.idio, size.idio = .9, 
+                d = d, 
+                do.scale = !FALSE, seed = NULL)
 x <- ss$x
 
 x <- ss$xi
+
+# block <- VARDetect::tbss(t(ss$xi), method = 'sparse', q = d); block$cp
 
 # pcf0 <- post.cp.fa((ss$x - 0 * ss$xi)[, 1:(2*cs$G.seq[2])], cs$G.seq[2], q = q, ic.op = 5, cs$ll.seq[1])
 # pcf <- post.cp.fa((ss$x - 0 * ss$xi), cp.common, q = q, ic.op = 5, cs$ll.seq[1])
 # norm(pcf$Sigma_c[,, 2, 1] - pcf$Sigma_c[,, 2, 2], '2') / norm(pcf0$Sigma_c[,, 2, 1] - pcf0$Sigma_c[,, 2, 2], '2')
 # norm(pcf$Sigma_c[,, 2, 2] - pcf$Sigma_c[,, 2, 3], '2') / norm(pcf0$Sigma_c[,, 2, 1] - pcf0$Sigma_c[,, 2, 2], '2')
 
-fnets:::dyn.pca(x)$hl$q.hat
+# fnets:::dyn.pca(x)$hl$q.hat
 
 # if common != 0
-cs <- common.seg(x, G.seq = NULL, thr = NULL, tt.by = round(log(dim(x)[2])^2/2), 
+cs <- common.seg(x, G.seq = NULL, thr = NULL, tt.by = round(log(dim(x)[2]) * 2), 
                  demean = TRUE, agg.over.freq = c('avg', 'max')[1], 
                  rule = c('eta', 'epsilon')[1], eta = .5, epsilon = .1, do.check = FALSE, do.plot = !FALSE)
 cs$est.cp
-cs$est.cp.list[[1]]$null.norm
 
 # cs0 <- common.seg(ss$x - ss$xi, G.seq = NULL, thr = NULL, tt.by = round(log(dim(x)[2])^2), 
 #                  demean = TRUE, agg.over.freq = c('avg', 'max')[1], 
