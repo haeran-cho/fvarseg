@@ -8,7 +8,7 @@ source('common_seg.R')
 source('misc.R')
 
 n <- 2000
-p <- 100
+p <- 10
 q <- 0
 d <- 2
 
@@ -27,10 +27,8 @@ x <- ss$x
 
 x <- ss$xi
 
-do.next <- FALSE
-block <- tryCatch(VARDetect::tbss(t(ss$xi), method = 'sparse', q = d),
-                  error = function(e){ do.next <- TRUE })
-if(do.next) next else # SAVE block$cp
+block <- VARDetect::tbss(t(ss$xi), method = 'sparse', q = d)
+block$cp
 
 # pcf0 <- post.cp.fa((ss$x - 0 * ss$xi)[, 1:(2*cs$G.seq[2])], cs$G.seq[2], q = q, ic.op = 5, cs$ll.seq[1])
 # pcf <- post.cp.fa((ss$x - 0 * ss$xi), cp.common, q = q, ic.op = 5, cs$ll.seq[1])
@@ -51,10 +49,13 @@ cs$est.cp
 # cs0$est.cp
 # cs0$est.cp.list[[1]]$null.norm
 # 
-#  # if we know common = 0, to compare against VARDetect
-# cs <- list(est.cp = c(), ll.seq = max(1, floor(min((n/10)^(1/3), n/(2 * log(n)))))) 
 
-is <- idio.seg(x, common.seg.out = cs, G.seq = round(seq(2 * p, n / min(5, n/(2 * p)), length.out = 4)), thr = rep(1, 4), d = d, demean = TRUE,
+# if we know common = 0, to compare against VARDetect
+cs <- list(est.cp = c(), ll.seq = max(1, floor(min((n/10)^(1/3), n/(2 * log(n))))))
+
+is <- idio.seg(x, common.seg.out = cs, 
+               G.seq = round(seq(2 * p, n / min(5, n/(2 * p)), length.out = 4)), 
+               thr = rep(1, 4), d = d, demean = TRUE,
                cv.args = list(path.length = 10, n.folds = 1, do.cv = FALSE, do.plot = !FALSE), 
                rule = c('eta', 'epsilon')[1], eta = .5, epsilon = 5 / (2.5 * p))
 is$est.cp  
