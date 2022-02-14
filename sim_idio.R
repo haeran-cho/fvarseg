@@ -234,8 +234,9 @@ for(nn in 1:3){
     for(ll in 1:2){
       d <- c(1, 2)[ll]
       KK <- c(1, 100)[ll]  
-      load(file = paste('~/downloads/sim/sim_lanc/idio2_n', n, 'p', p, 'd', d, 'K', KK, '.RData', sep = ''))
-      if(kk == 1) out <- rbind(out, rbind(idio.out[,, 2, 1, 2]))
+      # load(file = paste('~/downloads/sim/sim_lanc/idio2_n', n, 'p', p, 'd', d, 'K', KK, '.RData', sep = ''))
+      load(file = paste('archive/idio2_n', n, 'p', p, 'd', d, 'K', KK, '.RData', sep = ''))
+      if(kk == 1) out <- rbind(out, rbind(idio.out[,, 2, 1, 1], idio.out[,, 2, 1, 2]))
       if(kk == 2) out <- rbind(out, idio.out[,, 2, 1, 3])
     }
                    
@@ -248,7 +249,7 @@ for(nn in 1:3){
 df <- data.frame(n = xx[, 1], p = xx[, 2], G = xx[, 3], y80 = yy[, 1], y90 = yy[, 2], y95 = yy[, 3])
 
 y <- df$y90
-fit <- lm(log(y) ~ 0 + I(log(log(n))) + I(log(p)) + I(log(G)), data = df)
+fit <- lm(log(y) ~ 0 + I(log(log(n))) + I(log(log(p))) + I(log(G)), data = df)
 fit <- lm(y ~ I((log(n)/G)^(1/3)) + I(1/p), data = df)
 
 summary(fit)
@@ -259,7 +260,7 @@ for(jj in 1:3){
   if(jj == 1) y <- df$y80
   if(jj == 2) y <- df$y90
   if(jj == 3) y <- df$y95
-  fit <- lm(log(y) ~ 0 + I(log(log(n))) + I(log(p)) + I(log(G)), data = df)  
+  fit <- lm(log(y) ~ 0 + I(log(log(n))) + I(log(log(p))) + I(log(G)), data = df)  
   idio.fit.list[[jj]] <- fit
   
   if(jj == 1){
@@ -274,6 +275,75 @@ n <- 1000
 G <- 50
 p <- 150
 exp(predict(fit, list(n = n, p = p, G = G)))
+
+
+######################
+
+library(quantreg)
+
+n.seq <- 250 * c(4, 8, 16)
+p.seq <- 25 * c(2, 4, 6)
+
+kk <- 2
+
+yx <- c()
+for(nn in 1:3){
+  n <- n.seq[nn]
+  for(pp in 1:3){
+    p <- p.seq[pp]
+    if(kk == 1) G.seq <- sort(round(seq(2 * p, n / min(5, n/(p * 2.5)), length.out = 4)))
+    if(kk == 2) G.seq <- sort(round(seq(2.5 * p, n / min(5, n/(p * 3)), length.out = 4)))
+    
+    for(ll in 1:2){
+      d <- c(1, 2)[ll]
+      KK <- c(1, 100)[ll]  
+      load(file = paste('archive/idio2_n', n, 'p', p, 'd', d, 'K', KK, '.RData', sep = ''))
+      for(gg in 1:4){
+        G <- G.seq[gg]
+        if(kk == 1){
+          tmp <- idio.out[, gg, 2, 1, 1]
+          tmp <- c(tmp, idio.out[, gg, 2, 1, 2])
+        } else tmp <- idio.out[, gg, 2, 1, 3]
+        tmp <- cbind(tmp, n)
+        tmp <- cbind(tmp, p)
+        tmp <- cbind(tmp, G)
+        
+        yx <- rbind(yx, tmp)
+      }
+    }
+  }
+}
+
+df <- data.frame(y = yx[, 1], n = yx[, 2], p = yx[, 3], G = yx[, 4])
+
+fit <- rq(log(y) ~ 0 + I(log(log(n))) + I(log(log(p))) + I(log(G)), tau = .95, data = df)
+
+summary(fit)
+
+plot(fitted(fit))
+
+
+idio.fit.list <- list()
+qu <- c(.8, .9, .95)
+for(jj in 1:3){
+  fit <- rq(log(y) ~ 0 + I(log(log(n))) + I(log(log(p))) + I(log(G)), tau = qu[jj], data = df)
+  idio.fit.list[[jj]] <- fit
+}
+
+idio.fit.list0 <- idio.fit.list
+save(idio.fit.list0, file = 'new_idio_fit0.RData')
+
+n <- 2000
+p <- 100
+G.seq <- sort(round(seq(2 * p, n / min(5, n/(p * 2.5)), length.out = 4)))
+G.seq <- sort(round(seq(2.5 * p, n / min(5, n/(p * 3)), length.out = 4)))
+
+exp(predict(fit, list(n = n, p = p, G = G.seq[2])))
+exp(predict(idio.fit.list[[3]], list(n = n, p = p, G = G.seq[2])))
+
+load(file = paste('archive/idio2_n', n, 'p', p, 'd', 1, 'K', 1, '.RData', sep = ''))
+apply(rbind(idio.out[,, 2, 1, 1], idio.out[,, 2, 1, 2]), 2, quantile, .95)
+apply(idio.out[,, 2, 1, 3], 2, quantile, .95)
 
 
 
