@@ -189,4 +189,80 @@ G <- 500
 p <- 150
 exp(predict(fit, list(n = n, p = p, G = G)))
 
+######################
+
+library(quantreg)
+
+n.seq <- 250 * c(4, 8, 16)
+p.seq <- 25 * c(2, 4, 6)
+
+yx <- c()
+for(nn in 1:3){
+  n <- n.seq[nn]
+  for(pp in 1:3){
+    p <- p.seq[pp]
+    G.seq <- round(n * c(1/10, 1/8, 1/6, 1/4))
+    
+    for(ll in 1:2){
+      q <- c(2, 3)[ll]
+      KK <- c(1, 100)[ll]  
+      load(file = paste('archive/common1_n', n, 'p', p, 'q', q, 'K', KK, '.RData', sep = ''))
+      for(gg in 1:4){
+        G <- G.seq[gg]
+        tmp <- common.out[, gg, 1]
+        tmp <- c(tmp, common.out[, gg, 2])
+        
+        tmp <- cbind(tmp, n)
+        tmp <- cbind(tmp, p)
+        tmp <- cbind(tmp, G)
+        
+        yx <- rbind(yx, tmp)
+      }
+      
+      load(file = paste('archive/common2_n', n, 'p', p, 'q', q, 'K', KK, '.RData', sep = ''))
+      for(gg in 1:4){
+        G <- G.seq[gg]
+        tmp <- common.out[, gg, 1]
+        tmp <- c(tmp, common.out[, gg, 2])
+        
+        tmp <- cbind(tmp, n)
+        tmp <- cbind(tmp, p)
+        tmp <- cbind(tmp, G)
+        
+        yx <- rbind(yx, tmp)
+      }
+    }
+  }
+}
+
+df <- data.frame(y = yx[, 1], n = yx[, 2], p = yx[, 3], G = yx[, 4])
+
+fit <- rq(log(y) ~ 0 + I(log(log(n))) + I(log(G)), tau = .9, data = df)
+summary(fit)
+
+rho <- function(u, tau = .5) u*(tau - (u < 0))
+1 - sum(rho(fit$resid, fit$tau))/ sum(rho(log(df$y), fit$tau))
+
+common.fit.list <- list()
+qu <- c(.8, .9, .95)
+for(jj in 1:3){
+  fit <- rq(log(y) ~ 0 + I(log(log(n))) + I(log(G)), tau = qu[jj], data = df)
+  common.fit.list[[jj]] <- fit
+}
+
+save(common.fit.list, file = 'new_common_fit.RData')
+
+n <- 2000
+p <- 100
+G.seq <- round(n * c(1/10, 1/8, 1/6, 1/4))
+
+exp(predict(fit, list(n = n, p = p, G = G.seq[2])))
+exp(predict(common.fit.list[[2]], list(n = n, p = p, G = G.seq[2])))
+
+load(file = paste('archive/common1_n', n, 'p', p, 'q', q, 'K', KK, '.RData', sep = ''))
+tmp <- rbind(common.out[,, 1], common.out[,, 2])
+load(file = paste('archive/common2_n', n, 'p', p, 'q', q, 'K', KK, '.RData', sep = ''))
+tmp <- rbind(tmp, rbind(common.out[,, 1], common.out[,, 2]))
+apply(tmp, 2, quantile, .9)
+
 

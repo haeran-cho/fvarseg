@@ -333,13 +333,13 @@ for(jj in 1:3){
 idio.fit.list0 <- idio.fit.list
 save(idio.fit.list0, file = 'new_idio_fit0.RData')
 
-n <- 2000
-p <- 100
+n <- 4000
+p <- 150
 G.seq <- sort(round(seq(2 * p, n / min(5, n/(p * 2.5)), length.out = 4)))
 G.seq <- sort(round(seq(2.5 * p, n / min(5, n/(p * 3)), length.out = 4)))
 
 exp(predict(fit, list(n = n, p = p, G = G.seq[2])))
-exp(predict(idio.fit.list[[3]], list(n = n, p = p, G = G.seq[2])))
+exp(predict(idio.fit.list0[[3]], list(n = n, p = p, G = G.seq[2])))
 
 load(file = paste('archive/idio2_n', n, 'p', p, 'd', 1, 'K', 1, '.RData', sep = ''))
 apply(rbind(idio.out[,, 2, 1, 1], idio.out[,, 2, 1, 2]), 2, quantile, .95)
