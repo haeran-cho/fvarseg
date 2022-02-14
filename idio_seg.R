@@ -2,8 +2,8 @@ library(lpSolve)
 library(foreach)
 library(doParallel)
 
-load("idio_fit.RData")
-load("idio_fit0.RData")
+load("new_idio_fit.RData")
+load("new_idio_fit0.RData")
 
 IDIO_INDEX <- 3
 

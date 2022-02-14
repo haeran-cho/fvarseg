@@ -8,7 +8,7 @@ source('common_seg.R')
 source('misc.R')
 
 n <- 2000
-p <- 10
+p <- 100
 q <- 0
 d <- 2
 
@@ -20,15 +20,12 @@ cp.idio <- round(n * 1:3/4)
 
 ss <- sim.data2(n, p, q,
                 cp.common = cp.common, den.common = .7, type.common = c('ma', 'ar')[2],
-                cp.idio = cp.idio, size.idio = .9, 
+                cp.idio = cp.idio, size.idio = .8, 
                 d = d, 
                 do.scale = !FALSE, seed = NULL)
 x <- ss$x
 
 x <- ss$xi
-
-block <- VARDetect::tbss(t(ss$xi), method = 'sparse', q = d)
-block$cp
 
 # pcf0 <- post.cp.fa((ss$x - 0 * ss$xi)[, 1:(2*cs$G.seq[2])], cs$G.seq[2], q = q, ic.op = 5, cs$ll.seq[1])
 # pcf <- post.cp.fa((ss$x - 0 * ss$xi), cp.common, q = q, ic.op = 5, cs$ll.seq[1])
@@ -58,9 +55,19 @@ is <- idio.seg(x, common.seg.out = cs,
                thr = rep(1, 4), d = d, demean = TRUE,
                cv.args = list(path.length = 10, n.folds = 1, do.cv = FALSE, do.plot = !FALSE), 
                rule = c('eta', 'epsilon')[1], eta = .5, epsilon = 5 / (2.5 * p))
+
+is <- idio.seg(x, common.seg.out = cs, d = d, demean = TRUE,
+               cv.args = list(path.length = 10, n.folds = 1, do.cv = FALSE, do.plot = !FALSE), 
+               rule = c('eta', 'epsilon')[1], eta = .5, epsilon = 5 / (2.5 * p))
+
 is$est.cp  
+par(mfrow = c(2, 2))
 for(rr in 1:4){
   ts.plot(is$est.cp.list[[rr]]$norm.stat); abline(h = is$est.cp.list[[rr]]$thr, col = 4)
   abline(v = cp.idio, col = 2, lty = 3); abline(v = is$est.cp.list[[rr]]$cp, col = 4, lty = 2)
 }
+
+
+block <- VARDetect::tbss(t(ss$xi), method = 'sparse', q = d, use.BIC = FALSE)
+block$cp
 

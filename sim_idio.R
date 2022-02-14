@@ -6,8 +6,8 @@ n.seq <- 250 * c(4, 8, 16)
 p.seq <- 25 * c(2, 4, 6)
 q <- 2
 
-d <- 1
-KK <- 1
+d <- 2
+KK <- 100
 
 sim <- 200
 
@@ -284,7 +284,7 @@ library(quantreg)
 n.seq <- 250 * c(4, 8, 16)
 p.seq <- 25 * c(2, 4, 6)
 
-kk <- 2
+kk <- 1
 
 yx <- c()
 for(nn in 1:3){
@@ -317,11 +317,10 @@ for(nn in 1:3){
 df <- data.frame(y = yx[, 1], n = yx[, 2], p = yx[, 3], G = yx[, 4])
 
 fit <- rq(log(y) ~ 0 + I(log(log(n))) + I(log(log(p))) + I(log(G)), tau = .95, data = df)
-
 summary(fit)
 
-plot(fitted(fit))
-
+rho <- function(u, tau = .5) u*(tau - (u < 0))
+1 - sum(rho(fit$resid, fit$tau))/ sum(rho(log(df$y), fit$tau))
 
 idio.fit.list <- list()
 qu <- c(.8, .9, .95)
