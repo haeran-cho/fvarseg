@@ -214,7 +214,7 @@ exp(predict(fit, list(n = n, p = p, G = G)))
 n.seq <- 250 * c(4, 8, 16)
 p.seq <- 25 * c(2, 4, 6)
 
-kk <- 2
+kk <- 1
 
 qu <- c(.8, .9, .95)
 yy <- xx <- c()
@@ -268,6 +268,8 @@ for(jj in 1:3){
   # } else points(exp(fitted(fit)), y, col = jj)
 }
 
+save(idio.fit.list, file = 'idio_fit.RData')
+
 idio.fit.list0 <- idio.fit.list
 save(idio.fit.list0, file = 'idio_fit0.RData')
 
@@ -284,7 +286,7 @@ library(quantreg)
 n.seq <- 250 * c(4, 8, 16)
 p.seq <- 25 * c(2, 4, 6)
 
-kk <- 2
+kk <- 1
 
 yx <- c()
 for(nn in 1:3){
@@ -319,7 +321,7 @@ df <- data.frame(y = yx[, 1], n = yx[, 2], p = yx[, 3], G = yx[, 4])
 fit <- rq(log(y) ~ 0 + I(log(log(n))) + I(log(log(p))) + I(log(G)), tau = .95, data = df)
 summary(fit)
 
-plot(exp(fitted(fit)), df$y)
+plot(exp(fitted(fit)), df$y); abline(a = 0, b = 1, col = 2)
 
 rho <- function(u, tau = .5) u*(tau - (u < 0))
 1 - sum(rho(fit$resid, fit$tau))/ sum(rho(log(df$y), fit$tau))
@@ -330,6 +332,8 @@ for(jj in 1:3){
   fit <- rq(log(y) ~ 0 + I(log(log(n))) + I(log(log(p))) + I(log(G)), tau = qu[jj], data = df)
   idio.fit.list[[jj]] <- fit
 }
+
+save(idio.fit.list, file = 'new_idio_fit.RData')
 
 idio.fit.list0 <- idio.fit.list
 save(idio.fit.list0, file = 'new_idio_fit0.RData')
