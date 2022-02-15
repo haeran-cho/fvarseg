@@ -9,7 +9,7 @@ IDIO_INDEX <- 3
 
 ## idio
 # if est.cp.common = c() and q = 0, it becomes var segmentation
-idio.seg <- function(x, common.seg.out, d = 1, G.seq = NULL, thr = NULL, demean = TRUE,
+idio.seg <- function(x, common.seg.out, q = NULL, d = 1, G.seq = NULL, thr = NULL, demean = TRUE,
                      cv.args = list(path.length = 10, n.folds = 1, do.cv = TRUE, do.plot = FALSE), 
                      rule = c('eta', 'epsilon'), eta = .5, epsilon = .1){
   
@@ -28,7 +28,7 @@ idio.seg <- function(x, common.seg.out, d = 1, G.seq = NULL, thr = NULL, demean 
   idx <- rep(c(1:(length(brks) - 1)), diff(brks))
   lll <- max(1, 4 * floor((min(diff(brks))/log(min(diff(brks))))^(1/3)))
   ll <- min(common.seg.out$ll.seq, lll)
-  pcfa <- post.cp.fa(xx, est.cp.common, NULL, 5, lll)
+  pcfa <- post.cp.fa(xx, est.cp.common, q, 5, lll)
   Gamma_c <- pcfa$Gamma_c[,, 1:(ll + 1),, drop = FALSE]
   
   if(is.null(G.seq)){
@@ -56,7 +56,7 @@ idio.seg <- function(x, common.seg.out, d = 1, G.seq = NULL, thr = NULL, demean 
     while(vv <= n - G){
       int <- (vv - G + 1):vv
       if(do.beta){
-        dpca <- fnets:::dyn.pca(xx[, int], ic.op = 5, mm = lll)
+        dpca <- fnets:::dyn.pca(xx[, int], q = q, ic.op = 5, mm = lll)
         if(cv.args$do.cv){
           ycv <- fnets:::yw.cv(xx[, int], method = 'ds', var.order = d, 
                                n.folds = cv.args$n.folds, path.length = cv.args$path.length,
