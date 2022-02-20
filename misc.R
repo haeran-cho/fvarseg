@@ -1,6 +1,6 @@
 sim.data0 <- function(n, p, q,  
                       cp.common = c(), den.common = 1, type.common = c('ma', 'ar')[1], ma.order = 2,
-                      cp.idio = c(), size.idio = 1, 
+                      cp.idio = c(), d = 1, size.idio = 1, 
                       do.scale = TRUE, seed = NULL){
   
   burnin = 100

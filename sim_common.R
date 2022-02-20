@@ -1,6 +1,6 @@
-source("~/Documents/GitHub/favar.segment/common_seg.R")
-source("~/Documents/GitHub/favar.segment/idio_seg.R")
-source("~/Documents/GitHub/favar.segment/misc.R")
+source("~/Documents/GitHub/fnets.segment/common_seg.R")
+source("~/Documents/GitHub/fnets.segment/idio_seg.R")
+source("~/Documents/GitHub/fnets.segment/misc.R")
 
 n.seq <- 250 * c(4, 8, 16)
 p.seq <- 25 * c(2, 4, 6)

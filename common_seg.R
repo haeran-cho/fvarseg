@@ -1,8 +1,8 @@
-load("common_fit.RData")
+load("~/Documents/GitHub/fnets.segment/new_common_fit.RData")
 
 COMMON_INDEX <- 2
 
-common.seg <- function(x, G.seq = NULL, thr = NULL, tt.by = floor(log(dim(x)[2])^2), demean = TRUE,
+common.seg <- function(x, G.seq = NULL, thr = NULL, tt.by = floor(2 * log(dim(x)[2])), demean = TRUE,
                        agg.over.freq = c('avg', 'max'), 
                        rule = c('eta', 'epsilon'), eta = .5, epsilon = .1, do.check = FALSE, do.plot = FALSE){
   
@@ -12,7 +12,7 @@ common.seg <- function(x, G.seq = NULL, thr = NULL, tt.by = floor(log(dim(x)[2])
   if(is.null(G.seq)) G.seq <- round(n * c(1/10, 1/8, 1/6, 1/4))
   if(is.null(thr) | length(thr) != length(G.seq)){
     thr <- c()
-    for(ii in 1:length(G.seq)) thr <- c(thr, exp(predict(common.fit.list[[COMMON_INDEX]], list(n = n, p = p, G = G.seq[ii]))))
+    for(ii in 1:length(G.seq)) thr <- c(thr, exp(quantreg::predict.rq(common.fit.list[[COMMON_INDEX]], list(n = n, p = p, G = G.seq[ii]))))
   }
   
   rule <- match.arg(rule, c('eta', 'epsilon'))
@@ -41,7 +41,9 @@ common.seg <- function(x, G.seq = NULL, thr = NULL, tt.by = floor(log(dim(x)[2])
     common.list[[ii]]$cp <- est.cp
     
     if(do.plot){
-      matplot(cts$norm.stat, type = 'l'); abline(v = cp.common, lty = 2, col = 2, lwd = 2); abline(v = cp.idio, lty = 3, col = 6); abline(v = est.cp, col = 4, lty = 3); abline(h = thr[ii], col = 3); lines(cts$stat, col = 4, lwd = 2)
+      matplot(cts$norm.stat, type = 'l') 
+      # abline(v = cp.common, lty = 2, col = 2, lwd = 2); abline(v = cp.idio, lty = 3, col = 6)
+      abline(v = est.cp, col = 4, lty = 3); abline(h = thr[ii], col = 3); lines(cts$stat, col = 4, lwd = 2)
     }
   }
   

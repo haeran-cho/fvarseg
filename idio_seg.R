@@ -2,15 +2,15 @@ library(lpSolve)
 library(foreach)
 library(doParallel)
 
-load("new_idio_fit.RData")
-load("new_idio_fit0.RData")
+load("~/Documents/GitHub/fnets.segment/new_idio_fit.RData")
+load("~/Documents/GitHub/fnets.segment/new_idio_fit0.RData")
 
 IDIO_INDEX <- 3
 
 ## idio
 # if est.cp.common = c() and q = 0, it becomes var segmentation
 idio.seg <- function(x, common.seg.out, q = NULL, d = 1, G.seq = NULL, thr = NULL, demean = TRUE,
-                     cv.args = list(path.length = 10, n.folds = 1, do.cv = TRUE, do.plot = FALSE), 
+                     cv.args = list(path.length = 10, n.folds = 1, do.cv = TRUE), 
                      rule = c('eta', 'epsilon'), eta = .5, epsilon = .1){
   
   p <- dim(x)[1]
@@ -27,7 +27,7 @@ idio.seg <- function(x, common.seg.out, q = NULL, d = 1, G.seq = NULL, thr = NUL
   brks <- c(0, est.cp.common, n)
   idx <- rep(c(1:(length(brks) - 1)), diff(brks))
   lll <- max(1, 4 * floor((min(diff(brks))/log(min(diff(brks))))^(1/3)))
-  ll <- min(common.seg.out$ll.seq, lll)
+  ll <- max(d, min(common.seg.out$ll.seq, lll))
   pcfa <- post.cp.fa(xx, est.cp.common, q, 5, lll)
   Gamma_c <- pcfa$Gamma_c[,, 1:(ll + 1),, drop = FALSE]
   
@@ -40,8 +40,8 @@ idio.seg <- function(x, common.seg.out, q = NULL, d = 1, G.seq = NULL, thr = NUL
   if(is.null(thr) | length(thr) != length(G.seq)){
     thr <- c()
     if(K >= 1 | sum(pcfa$q.seq > 0)){
-      for(ii in 1:length(G.seq)) thr <- c(thr, exp(predict(idio.fit.list[[IDIO_INDEX]], list(n = n, p = p, G = G.seq[ii]))))
-    } else for(ii in 1:length(G.seq)) thr <- c(thr, exp(predict(idio.fit.list0[[IDIO_INDEX]], list(n = n, p = p, G = G.seq[ii]))))
+      for(ii in 1:length(G.seq)) thr <- c(thr, exp(quantreg::predict.rq(idio.fit.list[[IDIO_INDEX]], list(n = n, p = p, G = G.seq[ii]))))
+    } else for(ii in 1:length(G.seq)) thr <- c(thr, exp(quantreg::predict.rq(idio.fit.list0[[IDIO_INDEX]], list(n = n, p = p, G = G.seq[ii]))))
   }
   
   idio.list <- list()
@@ -60,7 +60,7 @@ idio.seg <- function(x, common.seg.out, q = NULL, d = 1, G.seq = NULL, thr = NUL
         if(cv.args$do.cv){
           ycv <- fnets:::yw.cv(xx[, int], method = 'ds', var.order = d, 
                                n.folds = cv.args$n.folds, path.length = cv.args$path.length,
-                               q = dpca$q, do.plot = cv.args$do.plot)
+                               q = dpca$q, do.plot = FALSE)
           lambda <- ycv$lambda
         } else{
           lambda.max <- max(abs(xx[, int] %*% t(xx[, int])/G))
@@ -123,12 +123,14 @@ idio.seg <- function(x, common.seg.out, q = NULL, d = 1, G.seq = NULL, thr = NUL
           check.cp <- c(check.cp, check.theta)
           first <- FALSE
         }
+        
         tt <- tt + 1
       }  
       # ts.plot(stat); abline(h = thr[ii], col = 3); abline(v = check.cp, col = 6); abline(v = cp.idio, col = 2, lty = 3)
       
       if(check.theta < tt.max){
         hat.theta <- (check.theta:tt.max)[which.max(stat[check.theta:tt.max])]
+        
         if(rule == 'eta'){
           est.cp <- c(est.cp, hat.theta)
           vv <- hat.theta + G
@@ -146,6 +148,9 @@ idio.seg <- function(x, common.seg.out, q = NULL, d = 1, G.seq = NULL, thr = NUL
         }
       } else break
     }
+    
+    # ts.plot(stat); abline(h = thr[ii], col = 3); abline(v = check.cp, col = 6); abline(v = est.cp, col = 2, lty = 3)
+    
     idio.list[[ii]] <- list(cp = est.cp, norm.stat = stat, G = G, thr = thr[ii], check.cp = check.cp)
   }
   
@@ -297,4 +302,5 @@ post.cp.fa <- function(xx, est.cp.common, q = NULL, ic.op = 5, ll){
   return(ls)
   
 }
+
 
