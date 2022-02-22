@@ -26,9 +26,14 @@ ma.order <- 2
 ###################################################################################
 ###################################################################################
 ### chi exists with changes
-sim.list = expand.grid(structure(list( cp.idio = list(c(NULL), c(round(n * 1:2/3))), p = c(50, 100, 150), cp.common= list(c(round(n * 1:2/3)), c(round(n * 1:3/4))), 
+sim.list = expand.grid(structure(list( cp.idio = list(c(NULL), c(round(n * 1:2/3))), 
+                                       p = c(50, 100, 150), 
+                                       cp.common= list(c(round(n * 1:2/3)), c(round(n * 1:3/4))), 
                                        type.common = c("ma", "ar"))))
-cp.idio = vector("list", 24); for(i in c(seq(2, 6, by=2), seq(14, 18, by=2))){ cp.idio[[i]] <- c(round(n * 1:2/3)); cp.idio[[i+6]] <- c(round(n * c(3,5)/8))}
+cp.idio = vector("list", 24)
+for(i in c(seq(2, 6, by=2), seq(14, 18, by=2))){ 
+  cp.idio[[i]] <- c(round(n * 1:2/3)); cp.idio[[i+6]] <- c(round(n * c(3,5)/8))
+  }
 sim.list$cp.idio = cp.idio
 sim.list
 
@@ -68,7 +73,8 @@ for(S in c(7:18)){
     est.cp.idio[[i]] <- is$est.cp[, 1]  
     
     for(rr in 1:4){
-      ts.plot(is$est.cp.list[[rr]]$norm.stat, ylim=range(c(is$est.cp.list[[rr]]$norm.stat, is$est.cp.list[[rr]]$thr))); abline(h = is$est.cp.list[[rr]]$thr, col = 4)
+      ts.plot(is$est.cp.list[[rr]]$norm.stat, ylim=range(c(is$est.cp.list[[rr]]$norm.stat, is$est.cp.list[[rr]]$thr)))
+      abline(h = is$est.cp.list[[rr]]$thr, col = 4)
       abline(v = cp.idio, col = 2, lty = 3); abline(v = is$est.cp.list[[rr]]$cp, col = 4, lty = 2)
     }
     
