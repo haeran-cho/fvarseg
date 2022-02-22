@@ -1,6 +1,6 @@
 sim.data0 <- function(n, p, q,  
                       cp.common = c(), den.common = 1, type.common = c('ma', 'ar')[1], ma.order = 2,
-                      cp.idio = c(), d = 1, size.idio = 1, 
+                      cp.idio = c(), size.idio = 1, d = 1, 
                       do.scale = TRUE, seed = NULL){
   
   burnin = 100
@@ -13,6 +13,7 @@ sim.data0 <- function(n, p, q,
       
       brks <- c(0, c(cp.common, n) + burnin)
       u <- sqrt(rep(c(1, .5, 1.5), ceiling(q/3))[1:q]) * matrix(rnorm(q * (n + burnin)), nrow = q)
+      #u <- sqrt(rep(c(1, 1.5), 1)[1:q]) * matrix(rnorm(q * (n + burnin)), nrow = q)
       chi <- matrix(0, nrow = p, ncol = n + burnin)
       for(ii in 1:(ma.order + 1)){
         bb <- matrix(rnorm(p * q), nrow = p) 
@@ -107,6 +108,7 @@ sim.data0 <- function(n, p, q,
   
   
 }
+
 
 
 sim.data <- function(n, p, q,  
