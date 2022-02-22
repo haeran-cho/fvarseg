@@ -1,0 +1,20 @@
+Package: fnets.segment
+Type: Package
+Title: 
+Version: 0.1.0
+Authors@R: c(
+    person("Haeran", "Cho", email = "haeran.cho@bristol.ac.uk", role = "aut"),
+    person("Hyeyoung", "Maeng", email = "", role = c("cre", "aut")),
+    person("Paul", "Fearnhead", email = "", role = "aut"),
+    person("Idris", "Eckley", email = "", role = "aut")
+    )
+Maintainer: Haeran Cho <haeran.cho@bristol.ac.uk>
+Description: Implements 
+Depends: R (>= 3.1.2)
+Imports: 
+    quantreg,
+    fnets
+License: GPL (>= 3)
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.1.1

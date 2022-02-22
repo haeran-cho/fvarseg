@@ -1,35 +1,63 @@
-load("~/Documents/GitHub/fnets.segment/new_common_fit.RData")
-
-COMMON_INDEX <- 2
-
-common.seg <- function(x, G.seq = NULL, thr = NULL, tt.by = floor(2 * log(dim(x)[2])), demean = TRUE,
-                       agg.over.freq = c('avg', 'max'), 
-                       rule = c('eta', 'epsilon'), eta = .5, epsilon = .1, do.check = FALSE, do.plot = FALSE){
+#' @title Segment factor-driven common component
+#' @description 
+#' @details See Algorithm 1 of Cho, Eckley, Fearnhead and Maeng (2022) for further details.
+#' @param x input time series matrix, with each row representing a variable
+#' @param demean whether to de-mean the input \code{x} row-wise
+#' @param G.seq a sequence of integers [TO DO]
+#' @param thr 
+#' @param tt.by 
+#' @param eta 
+#'
+#' @return a list containing the following fields:
+#' \item{est.cp}{ }
+#' \item{G.seq}{ }
+#' \item{thr}{ }
+#' \item{est.cp.list}{ a list containing the following fields:
+#' \itemize{
+#' \item{\code{cp}}{ }
+#' \item{\code{G}}{ }
+#' \item{\code{ll}}{ }
+#' \item{\code{norm.stat}}{ }
+#' \item{\code{stat}}{ }
+#' }}
+#' \item{mean.x}{ if \code{center = TRUE}, returns a vector containing row-wise sample means of \code{x}; if \code{center = FALSE}, returns a vector of zeros}
+#'
+#' @importFrom quantreg predict.rq
+#' @references H. Cho, I. Eckley, P. Fearnhead and H. Maeng (2022) High-dimensional time series segmentation via factor-adjusted vector autoregressive modelling. arXiv preprint arXiv: TODO
+#' @export
+common.seg <- function(x, demean = TRUE, G.seq = NULL, thr = NULL, 
+                       tt.by = floor(2 * log(dim(x)[2])), eta = .5){
   
   p <- dim(x)[1]
   n <- dim(x)[2]
   
-  if(is.null(G.seq)) G.seq <- round(n * c(1/10, 1/8, 1/6, 1/4))
+  COMMON_INDEX <- 2
+  load("common_thr.RData")
+  
+  if(is.null(G.seq)) G.seq <- round(n * c(1/10, 1/8, 1/6, 1/4)) else G.seq <- round(sort(G.seq, decreasing = FALSE))
   if(is.null(thr) | length(thr) != length(G.seq)){
     thr <- c()
     for(ii in 1:length(G.seq)) thr <- c(thr, exp(quantreg::predict.rq(common.fit.list[[COMMON_INDEX]], list(n = n, p = p, G = G.seq[ii]))))
   }
   
-  rule <- match.arg(rule, c('eta', 'epsilon'))
-  agg.over.freq <- match.arg(agg.over.freq, c('avg', 'max'))
+  # rule <- match.arg(rule, c('eta', 'epsilon'))
+  # agg.over.freq <- match.arg(agg.over.freq, c('avg', 'max'))
+  
+  rule <- 'eta'
+  agg.over.freq <- 'avg'
+  do.check <- FALSE
+  do.plot <- FALSE
   
   if(demean) mean.x <- apply(x, 1, mean) else mean.x <- rep(0, p)
   xx <- x - mean.x
   
   common.list <- list()
-  ll.seq <- c()
   
   if(do.plot) par(mfrow = c(2, ceiling(length(G.seq)/2)))
 
   for(ii in 1:length(G.seq)){
     G <- G.seq[ii]
     ll <- max(1, floor(min(G^(1/3), n/(2 * log(n)))))
-    ll.seq <- c(ll.seq, ll)
 
     common.list[[ii]] <- cts <- common.two.step(xx, G, thr[ii], ll, tt.by, agg.over.freq)
     common.list[[ii]]$G <- G
@@ -41,15 +69,14 @@ common.seg <- function(x, G.seq = NULL, thr = NULL, tt.by = floor(2 * log(dim(x)
     common.list[[ii]]$cp <- est.cp
     
     if(do.plot){
-      matplot(cts$norm.stat, type = 'l') 
-      # abline(v = cp.common, lty = 2, col = 2, lwd = 2); abline(v = cp.idio, lty = 3, col = 6)
-      abline(v = est.cp, col = 4, lty = 3); abline(h = thr[ii], col = 3); lines(cts$stat, col = 4, lwd = 2)
+      matplot(cts$norm.stat, type = 'l'); lines(cts$stat, col = 4, lwd = 2)
+      abline(v = est.cp, col = 4, lty = 3); abline(h = thr[ii], col = 3)
     }
   }
   
   est.cp <- bottom.up(common.list, eta)
   
-  out <- list(est.cp = est.cp, G.seq = G.seq, ll.seq = ll.seq,
+  out <- list(est.cp = est.cp, G.seq = G.seq, thr = thr,
               est.cp.list = common.list, mean.x = mean.x)
   return(out)
   
@@ -64,23 +91,7 @@ common.two.step <- function(xx, G, thr, ll, tt.by, agg.over.freq = 'avg'){
   len <- 2 * ll
   thetas <- 2 * pi * (0:len)/(len + 1)
   w <- Bartlett.weights(((-ll):ll)/ll)
-  
-  # null <- x1 <- array(0, dim = c(p, p, ll + 1))
-  # for(h in 0:ll){
-  #   ind.l <- (1 + h):G
-  #   ind.r <- (n - G + 1 + h):n
-  #   x1[,, h + 1] <- xx[, ind.l - h] %*% t(xx[, ind.l]) + xx[, ind.r - h] %*% t(xx[, ind.r])
-  #   x1[,, h + 1] <- x1[,, h + 1]/(2 * G)
-  #   for(ii in 1:(ll + 1)) {
-  #     null[,, ii] <- null[,, ii] + 
-  #       x1[,, h + 1] * w[h + ll + 1] * exp(-(0 + 1i) * h * thetas[ii]) +
-  #       (h > 0) * t(x1[,, h + 1]) * w[h + ll + 1] * exp((0 + 1i) * h * thetas[ii])
-  #   }
-  # }
-  # null <- null/(2 * pi)
-  # null.norm <- apply(abs(null), 3, norm, type = norm.type)
-  # if(norm.type %in% c('f', '2')) null.norm <- null.norm / sqrt(p)
-  
+
   tt.seq <- round(seq(G, n - G, by = tt.by))
   stat0 <- common.stat.by(xx, G, ll, tt.seq)
   
@@ -90,9 +101,6 @@ common.two.step <- function(xx, G, thr, ll, tt.by, agg.over.freq = 'avg'){
   if(agg.over.freq == 'avg') stat <- apply(norm.stat, 1, mean)
   if(agg.over.freq == 'max') stat <- apply(norm.stat, 1, max)
   
-  # matplot(tt.seq, norm.stat[tt.seq, ], type = 'l'); abline(v = cp.common, lty = 2, col = 2); abline(h = thr, col = 3); lines(tt.seq, stat[tt.seq], col = 4, lwd = 2)
-  
-  # tt.list <- common.tt.list(norm.stat, G, thr, tt.seq, tt.by)
   if(tt.by > 1){
     tt.list <- common.tt.list(stat, G, thr, tt.seq, tt.by)
     if(length(tt.list) > 0){
@@ -107,7 +115,7 @@ common.two.step <- function(xx, G, thr, ll, tt.by, agg.over.freq = 'avg'){
     } 
   }
   
-  ls <- list(norm.stat = norm.stat, stat = stat, null.norm = null.norm)
+  ls <- list(norm.stat = norm.stat, stat = stat)
   return(ls)
   
 }
@@ -139,35 +147,6 @@ common.search.cp <- function(cts, thr, G, rule, eta = .5, epsilon = .1){
   est.cp
   
 }
-
-#' #' @keywords internal
-#' literal implementation of alg 1
-#' common.search.cp <- function(cts, thr, G, eta = .5){
-#'   
-#'   n <- length(cts$stat)
-#'   est.cp <- c()
-#'   new.norm.stat <- cts$norm.stat * (cts$norm.stat > thr)
-#'   survived <- apply(new.norm.stat > 0, 1, max) == 1
-#'   new.stat <- cts$stat
-#'   
-#'   while(sum(survived) > 0){
-#'     agg.stat <- apply(new.norm.stat, 1, max)
-#'     mv <- max(agg.stat)
-#'     hat.theta0 <- min(which(agg.stat == mv))
-#'     lstar <- which.max(new.norm.stat[hat.theta0, ])
-#'     int <- max(1, hat.theta0 - round(eta * G) + 1):min(hat.theta0 + round(eta * G), n)
-#'     if(new.norm.stat[hat.theta0, lstar] >= max(new.norm.stat[int, lstar])){
-#'       hat.theta <- int[1] + which.max(new.stat[int]) - 1
-#'       est.cp <- c(est.cp, hat.theta)
-#'     }
-#'     int <- max(1, hat.theta - G + 1):min(hat.theta + G, n)
-#'     survived[int] <- FALSE
-#'     new.norm.stat[!survived, ] <- 0
-#'   }
-#'   
-#'   est.cp
-#'   
-#' }
 
 #' @keywords internal
 common.tt.list <- function(eval, G, thr, tt.seq, tt.by){
