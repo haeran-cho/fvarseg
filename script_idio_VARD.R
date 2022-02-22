@@ -117,7 +117,6 @@ d <- 2
 
 ##### simulations
 for(S in 1:dim(sim.list)[1]){
-#for(S in 4:5){
     
   p = c(sim.list[S,][1], recursive=T, use.names=F)
   cp.idio = c(sim.list[S,][2], recursive=T, use.names=F)
@@ -200,9 +199,8 @@ for(S in 1:dim(sim.list)[1]){
 
 
 ##### simulations
-#for(S in 1:dim(sim.list)[1]){
-for(S in 4){  
-  
+for(S in 1:dim(sim.list)[1]){
+
   p = c(sim.list[S,][1], recursive=T, use.names=F)
   cp.idio = c(sim.list[S,][2], recursive=T, use.names=F)
   cp.common = c(sim.list[S,][3], recursive=T, use.names=F)  
@@ -268,8 +266,7 @@ for(S in 4){
 
 
 ##### simulations
-#for(S in 1:dim(sim.list)[1]){
-for(S in c(2,3,5,6)){
+for(S in 1:dim(sim.list)[1]){
   
   p = c(sim.list[S,][1], recursive=T, use.names=F)
   cp.idio = c(sim.list[S,][2], recursive=T, use.names=F)
