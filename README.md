@@ -1,4 +1,4 @@
-# favar.segment
+# fvarseg
 Contains a method for high-dimensional time series segmentation under a piecewise stationary factor-adjusted vector autoregressive model. See 
 
 > High-dimensional time series segmentation via factor-adjusted vector autoregressive modelling
@@ -23,7 +23,7 @@ out <- sim.data(n = 2000, p = 100, q = 2, d = 1,
 x <- out$x
 ````
 
-Apply FVARseg with default settings.
+Apply `fvar.seg` with default settings.
 ```
 fs <- fvar.seg(x)
 ```
