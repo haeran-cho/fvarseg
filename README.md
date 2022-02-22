@@ -1,7 +1,9 @@
 # favar.segment
 Change point detection in factor-adjusted VAR processes
 
-sd <- sim.data(n = 2000, p = 100, q = 0, type.common = 'ma', den.common = .5, d = 1)
+sd <- sim.data(n = 2000, p = 100, q = 2, 
+  cp.common = round(n * 1:3/4), den.common = .5, type.common = 'ma', 
+  cp.idio = round(n * c(3, 5)/8), d = 1, seed = 123)
 x <- sd$x
 
 fs <- fvar.seg(x)
@@ -21,9 +23,6 @@ is$est.cp
 par(mar = rep(1, 4), mfrow = c(2, 2))
 for(rr in 1:length(is$G.seq)){
   ts.plot(is$est.cp.list[[rr]]$stat); abline(h = is$est.cp.list[[rr]]$thr, col = 4)
-  abline(v = sd$cp.idio, col = 2, lty = 3); abline(v = is$est.cp.list[[rr]]$cp, col = 4, lty = 2)
+  abline(v = sd$cp.idio, col = 2, lty = 3); abline(v = is$est.cp.list[[rr]]$cp, col = 4, lty = 2); abline(v = is$est.cp.list[[rr]]$check.cp, col = 6, lty = 2)
 }
-
-is$G.seq
-is$thr
 
