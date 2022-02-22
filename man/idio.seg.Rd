@@ -66,7 +66,8 @@ out <- sim.data(n = 2000, p = 100, q = 2, d = 1,
 cp.common = 1:3/4, den.common = .5, type.common = 'ma', 
 cp.idio = c(3, 5)/8, seed = 123
 cs <- common.seg(out$x)
-is <- idio.seg(sd$x, common.out = cs, d = 1)
+cs$est.cp
+is <- idio.seg(out$x, common.out = cs, d = 1)
 is$est.cp
 }
 }
