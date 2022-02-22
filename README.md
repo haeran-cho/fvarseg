@@ -1,7 +1,21 @@
 # favar.segment
-Change point detection in factor-adjusted VAR processes
+Contains a method for high-dimensional time series segmentation under a piecewise stationary factor-adjusted vector autoregressive model. See 
 
-Generate a piecewise stationary factor-adjusted VAR process.
+> High-dimensional time series segmentation via factor-adjusted vector autoregressive modelling
+
+by Haeran Cho, Idris Eckley, Paul Fearnhead and Hyeyoung Maeng [arXiv:](https://arxiv.org/abs/) for full details.
+
+## Installation
+
+To install `fvarseg` from GitHub:
+
+```
+devtools::install_github("https://github.com/haeran-cho/fvarseg")
+```
+
+## Usage
+
+We can generate an example dataset used in the above paper for simulation studies as
 ```
 out <- sim.data(n = 2000, p = 100, q = 2, d = 1,
   cp.common = 1:3/4, den.common = .5, type.common = 'ma', 
@@ -18,7 +32,10 @@ Change points detected from the common component.
 ```
 cs <- fs$common.out
 cs$est.cp
+```
 
+Visualise the results.
+```
 par(mar = rep(2, 4), mfrow = c(2, 2))
 for(rr in 1:length(cs$G.seq)){
   matplot(cs$est.cp.list[[rr]]$norm.stat, type = 'l', xlab = 'time', ylab = '', main = paste('G = ', cs$est.cp.list[[rr]]$G, sep = '')) # change point detector from each frequency
@@ -33,7 +50,10 @@ Change points detected from the idiosyncratic component.
 ```
 is <- fs$idio.out
 is$est.cp  
+```
 
+Visualise the results.
+```
 par(mar = rep(2, 4), mfrow = c(2, 2))
 for(rr in 1:length(is$G.seq)){
   plot(is$est.cp.list[[rr]]$stat, type = 'l', xlab = 'time', ylab = '', main = paste('G = ', is$est.cp.list[[rr]]$G, sep = '')) # change point detector 
