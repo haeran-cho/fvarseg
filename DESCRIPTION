@@ -1,18 +1,21 @@
 Package: fvarseg
 Type: Package
-Title: 
+Title: High-dimensional Time Series Segmentation via Factor-adjusted Vector Autoregressive Modelling
 Version: 0.1.0
 Authors@R: c(
-    person("Haeran", "Cho", email = "haeran.cho@bristol.ac.uk", role = "aut"),
-    person("Hyeyoung", "Maeng", email = "", role = c("cre", "aut")),
-    person("Paul", "Fearnhead", email = "", role = "aut"),
-    person("Idris", "Eckley", email = "", role = "aut")
+    person("Haeran", "Cho", email = "haeran.cho@bristol.ac.uk", role = c("cre", "aut")),
+    person("Hyeyoung", "Maeng", email = "h.maeng4@lancaster.ac.uk", role = "aut"),
+    person("Paul", "Fearnhead", email = "p.fearnhead@lancaster.ac.uk", role = "aut"),
+    person("Idris", "Eckley", email = "i.eckley@lancaster.ac.uk", role = "aut")
     )
 Maintainer: Haeran Cho <haeran.cho@bristol.ac.uk>
-Description: Implements TODO
-Depends: R (>= 3.1.2)
+Description: Implements a two-stage time series segmentation methodology that first detects change points in the factor-driven common component, and then detects change points in the idiosyncratic vector autoregressive process.
+Depends: R (>= 4.1.0)
 Imports: 
-    fnets
+    lpSolve,
+    parallel,
+    doParallel,
+    foreach
 License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true

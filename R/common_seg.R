@@ -1,29 +1,35 @@
-# TODO: remove load
-
 #' @title Segment factor-driven common component
-#' @description 
 #' @details See Algorithm 1 of Cho, Eckley, Fearnhead and Maeng (2022) for further details.
 #' @param x input time series matrix, with each row representing a variable
 #' @param center whether to de-mean the input \code{x} row-wise
-#' @param G.seq a sequence of integers [TO DO]
-#' @param thr 
-#' @param tt.by 
-#' @param eta 
+#' @param G.seq an integer vector of bandwidth; if \code{G.seq = NULL}, a default choice \code{G.seq = round(n * 1/c(10, 8, 6, 4))} is used
+#' @param thr a vector of thresholds which is of the same length as \code{G.seq}; if \code{thr = NULL}, a default choice based on simulations is used
+#' @param tt.by an integer specifying the grid over which the test statistic is computed, which is \code{round(seq(G, dim(x)[2] - G, by = tt.by))} for each bandwidth \code{G}
+#' @param eta a constant between \code{0} and \code{1}; each local maximiser of the test statistic within its \code{eta * G}-environment for the common component is deemed as a change point estimator. Also the bottom-up merging across the multiple bandwidths \code{G.seq} depends on this parameter
 #'
 #' @return a list containing the following fields:
-#' \item{est.cp}{ }
-#' \item{G.seq}{ }
-#' \item{thr}{ }
+#' \item{est.cp}{ a matrix containing the change point estimators in the first column and the finest bandwidth at which each is detected in the second column }
+#' \item{G.seq}{ an integer vector of bandwidths }
+#' \item{thr}{ a vector of thresholds which is of the same length as \code{G.seq} }
 #' \item{est.cp.list}{ a list containing the following fields:
 #' \itemize{
-#' \item{\code{cp}}{ }
-#' \item{\code{G}}{ }
-#' \item{\code{ll}}{ }
-#' \item{\code{norm.stat}}{ }
-#' \item{\code{stat}}{ }
+#' \item{\code{cp}}{ change point estimators }
+#' \item{\code{G}}{ bandwidth }
+#' \item{\code{ll}}{ kernel window size for spectral density estimation }
+#' \item{\code{norm.stat}}{ a matrix containing test statistic values at Fourier frequencies }
+#' \item{\code{stat}}{ a vector containing test statistic values across multiple frequencies }
 #' }}
 #' \item{mean.x}{ if \code{center = TRUE}, returns a vector containing row-wise sample means of \code{x}; if \code{center = FALSE}, returns a vector of zeros}
 #'
+#' @examples 
+#' \dontrun{
+#' out <- sim.data(n = 2000, p = 100, q = 2, d = 1,
+#' cp.common = 1:3/4, den.common = .5, type.common = 'ma', 
+#' cp.idio = c(3, 5)/8, seed = 123)
+#' cs <- common.seg(out$x)
+#' cs$est.cp
+#' }
+#' @importFrom stats predict.lm
 #' @references H. Cho, I. Eckley, P. Fearnhead and H. Maeng (2022) High-dimensional time series segmentation via factor-adjusted vector autoregressive modelling. arXiv preprint arXiv: TODO
 #' @export
 common.seg <- function(x, center = TRUE, G.seq = NULL, thr = NULL, 
@@ -33,12 +39,11 @@ common.seg <- function(x, center = TRUE, G.seq = NULL, thr = NULL,
   n <- dim(x)[2]
   
   COMMON_INDEX <- 2
-  load("data/common_thr.RData")
-  
+
   if(is.null(G.seq)) G.seq <- round(n * c(1/10, 1/8, 1/6, 1/4)) else G.seq <- round(sort(G.seq, decreasing = FALSE))
   if(is.null(thr) | length(thr) != length(G.seq)){
     thr <- c()
-    for(ii in 1:length(G.seq)) thr <- c(thr, exp(predict(common.fit.list[[COMMON_INDEX]], list(n = n, p = p, G = G.seq[ii]))))
+    for(ii in 1:length(G.seq)) thr <- c(thr, exp(stats::predict.lm(common.fit.list[[COMMON_INDEX]], list(n = n, p = p, G = G.seq[ii]))))
   }
   
   # rule <- match.arg(rule, c('eta', 'epsilon'))
@@ -47,15 +52,13 @@ common.seg <- function(x, center = TRUE, G.seq = NULL, thr = NULL,
   rule <- 'eta'
   agg.over.freq <- 'avg'
   do.check <- FALSE
-  do.plot <- FALSE
-  
+  epsilon <- 0
+
   if(center) mean.x <- apply(x, 1, mean) else mean.x <- rep(0, p)
   xx <- x - mean.x
   
   common.list <- list()
   
-  if(do.plot) par(mfrow = c(2, ceiling(length(G.seq)/2)))
-
   for(ii in 1:length(G.seq)){
     G <- G.seq[ii]
     ll <- max(1, floor(min(G^(1/3), n/(2 * log(n)))))
@@ -68,11 +71,6 @@ common.seg <- function(x, center = TRUE, G.seq = NULL, thr = NULL,
     est.cp <- common.search.cp(cts, thr[ii], G, rule, eta, epsilon)
     if(do.check) est.cp <- common.check(xx, G, est.cp, thr[ii], ll, q = NULL, ic.op = 5, agg.over.freq)
     common.list[[ii]]$cp <- est.cp
-    
-    if(do.plot){
-      matplot(cts$norm.stat, type = 'l'); lines(cts$stat, col = 4, lwd = 2)
-      abline(v = est.cp, col = 4, lty = 3); abline(h = thr[ii], col = 3)
-    }
   }
   
   est.cp <- bottom.up(common.list, eta)
@@ -175,6 +173,7 @@ common.tt.list <- function(eval, G, thr, tt.seq, tt.by){
 common.stat.by <- function(xx, G, ll, tt.seq){  
   
   p <- dim(xx)[1]
+  n <- dim(xx)[2]
   
   w <- Bartlett.weights(((-ll):ll)/ll)
   len <- 2 * ll
@@ -275,7 +274,7 @@ common.spec.est <- function(xx, q = NULL, ic.op = 5, ll){
   }
   if(is.null(q)){
     q.max <- min(50, floor(sqrt(min(nn - 1, p))))
-    qq <- hl.factor.number(xx, q.max, ll, w, do.plot = FALSE, center = FALSE)
+    qq <- hl.factor.number(xx, q.max, ll, w, center = FALSE)
     q <- qq$q.hat[ic.op]
     Sigma_x <- qq$Sigma_x
     sv <- qq$sv

@@ -6,8 +6,8 @@
 \usage{
 idio.seg(
   x,
-  demean = TRUE,
-  common.seg.out,
+  center = TRUE,
+  common.out = NULL,
   q = NULL,
   d = 1,
   G.seq = NULL,
@@ -19,37 +19,38 @@ idio.seg(
 \arguments{
 \item{x}{input time series matrix, with each row representing a variable}
 
-\item{demean}{whether to de-mean the input \code{x} row-wise}
+\item{center}{whether to de-mean the input \code{x} row-wise}
+
+\item{common.out}{output from \link[fvarseg]{common.seg}; if \code{common.out = NULL}, \code{x} is regarded as a piecewise stationary VAR process}
 
 \item{q}{an integer specifying the number of factors. If \code{q = NULL}, the factor number is estimated by an information criterion-based approach of Hallin and Liška (2007) for each segment}
 
 \item{d}{an integer specifying the VAR order}
 
-\item{G.seq}{a sequence of integers [TO DO]}
+\item{G.seq}{an integer vector of bandwidth; if \code{G.seq = NULL}, a default choice \code{G.seq = round(seq(2.5 * p, n / min(4, n/(3 * p))} is used when common component is present and \code{G.seq = round(seq(2 * p, n / min(5, n/(2 * p))} when it is absent}
 
-\item{thr}{}
+\item{thr}{a vector of thresholds which is of the same length as \code{G.seq}; if \code{thr = NULL}, a default choice based on simulations is used}
 
-\item{eta}{}
+\item{eta}{a constant between \code{0} and \code{1}; the bottom-up merging across the multiple bandwidths \code{G.seq} depends on this parameter}
 
-\item{cv.args}{a list specifying the tuning parameters required for Dantzig selector tuning parameter selection via cross-validation:
+\item{cv.args}{a list specifying the tuning parameters required for Dantzig selector tuning parameter selection via cross-validation. It contains:
 \itemize{
-   \item{\code{n.folds}}{ number of folds}
-   \item{\code{path.length}}{ number of regularisation parameter values to consider; a sequence is generated automatically based in this value}
+   \item{\code{n.folds}}{ number of folds }
+   \item{\code{path.length}}{ number of regularisation parameter values to consider; a sequence is generated in a data-driven way based in this value}
    \item{\code{do.cv}}{ if \code{do.cv = FALSE}, a fixed value is selected from a sequence of 10 values chosen in a data-driven way}
 }}
 }
 \value{
 a list containing the following fields:
-\item{est.cp}{ }
-\item{G.seq}{ }
-\item{thr}{ }
+\item{est.cp}{ a matrix containing the change point estimators in the first column and the finest bandwidth at which each is detected in the second column }
+\item{G.seq}{ an integer vector of bandwidths }
+\item{thr}{ a vector of thresholds which is of the same length as \code{G.seq} }
 \item{est.cp.list}{ a list containing the following fields:
 \itemize{
-\item{\code{cp}}{ }
-\item{\code{G}}{ }
-\item{\code{ll}}{ }
-\item{\code{norm.stat}}{ }
-\item{\code{stat}}{ }
+\item{\code{cp}}{  change point estimators }
+\item{\code{G}}{ bandwidth }
+\item{\code{stat}}{ a vector containing test statistic values }
+\item{\code{check.cp}}{ a vector of integers indicating where the test statistic exceeds the threshold locally }
 }}
 \item{mean.x}{ if \code{center = TRUE}, returns a vector containing row-wise sample means of \code{x}; if \code{center = FALSE}, returns a vector of zeros}
 }
@@ -58,6 +59,16 @@ Segment idiosyncratic VAR process
 }
 \details{
 See Algorithm 2 of Cho, Eckley, Fearnhead and Maeng (2022) for further details.
+}
+\examples{
+\dontrun{
+out <- sim.data(n = 2000, p = 100, q = 2, d = 1,
+cp.common = 1:3/4, den.common = .5, type.common = 'ma', 
+cp.idio = c(3, 5)/8, seed = 123
+cs <- common.seg(out$x)
+is <- idio.seg(sd$x, common.out = cs, d = 1)
+is$est.cp
+}
 }
 \references{
 H. Cho, I. Eckley, P. Fearnhead and H. Maeng (2022) High-dimensional time series segmentation via factor-adjusted vector autoregressive modelling. arXiv preprint arXiv: TODO

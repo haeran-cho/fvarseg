@@ -3,10 +3,10 @@ Change point detection in factor-adjusted VAR processes
 
 Generate a piecewise stationary factor-adjusted VAR process.
 ```
-sd <- sim.data(n = 2000, p = 100, q = 2, 
-  cp.common = round(n * 1:3/4), den.common = .5, type.common = 'ma', 
-  cp.idio = round(n * c(3, 5)/8), d = 1, seed = 123)
-x <- sd$x
+out <- sim.data(n = 2000, p = 100, q = 2, d = 1,
+  cp.common = 1:3/4, den.common = .5, type.common = 'ma', 
+  cp.idio = c(3, 5)/8, seed = 123)
+x <- out$x
 ````
 
 Apply FVARseg with default settings.

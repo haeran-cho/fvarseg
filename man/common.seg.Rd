@@ -6,7 +6,7 @@
 \usage{
 common.seg(
   x,
-  demean = TRUE,
+  center = TRUE,
   G.seq = NULL,
   thr = NULL,
   tt.by = floor(2 * log(dim(x)[2])),
@@ -16,28 +16,28 @@ common.seg(
 \arguments{
 \item{x}{input time series matrix, with each row representing a variable}
 
-\item{demean}{whether to de-mean the input \code{x} row-wise}
+\item{center}{whether to de-mean the input \code{x} row-wise}
 
-\item{G.seq}{a sequence of integers [TO DO]}
+\item{G.seq}{an integer vector of bandwidth; if \code{G.seq = NULL}, a default choice \code{G.seq = round(n * 1/c(10, 8, 6, 4))} is used}
 
-\item{thr}{}
+\item{thr}{a vector of thresholds which is of the same length as \code{G.seq}; if \code{thr = NULL}, a default choice based on simulations is used}
 
-\item{tt.by}{}
+\item{tt.by}{an integer specifying the grid over which the test statistic is computed, which is \code{round(seq(G, dim(x)[2] - G, by = tt.by))} for each bandwidth \code{G}}
 
-\item{eta}{}
+\item{eta}{a constant between \code{0} and \code{1}; each local maximiser of the test statistic within its \code{eta * G}-environment for the common component is deemed as a change point estimator. Also the bottom-up merging across the multiple bandwidths \code{G.seq} depends on this parameter}
 }
 \value{
 a list containing the following fields:
-\item{est.cp}{ }
-\item{G.seq}{ }
-\item{thr}{ }
+\item{est.cp}{ a matrix containing the change point estimators in the first column and the finest bandwidth at which each is detected in the second column }
+\item{G.seq}{ an integer vector of bandwidths }
+\item{thr}{ a vector of thresholds which is of the same length as \code{G.seq} }
 \item{est.cp.list}{ a list containing the following fields:
 \itemize{
-\item{\code{cp}}{ }
-\item{\code{G}}{ }
-\item{\code{ll}}{ }
-\item{\code{norm.stat}}{ }
-\item{\code{stat}}{ }
+\item{\code{cp}}{ change point estimators }
+\item{\code{G}}{ bandwidth }
+\item{\code{ll}}{ kernel window size for spectral density estimation }
+\item{\code{norm.stat}}{ a matrix containing test statistic values at Fourier frequencies }
+\item{\code{stat}}{ a vector containing test statistic values across multiple frequencies }
 }}
 \item{mean.x}{ if \code{center = TRUE}, returns a vector containing row-wise sample means of \code{x}; if \code{center = FALSE}, returns a vector of zeros}
 }
@@ -46,6 +46,15 @@ Segment factor-driven common component
 }
 \details{
 See Algorithm 1 of Cho, Eckley, Fearnhead and Maeng (2022) for further details.
+}
+\examples{
+\dontrun{
+out <- sim.data(n = 2000, p = 100, q = 2, d = 1,
+cp.common = 1:3/4, den.common = .5, type.common = 'ma', 
+cp.idio = c(3, 5)/8, seed = 123)
+cs <- common.seg(out$x)
+cs$est.cp
+}
 }
 \references{
 H. Cho, I. Eckley, P. Fearnhead and H. Maeng (2022) High-dimensional time series segmentation via factor-adjusted vector autoregressive modelling. arXiv preprint arXiv: TODO
