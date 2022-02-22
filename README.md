@@ -39,7 +39,7 @@ for(rr in 1:length(is$G.seq)){
   plot(is$est.cp.list[[rr]]$stat, type = 'l', xlab = 'time', ylab = '', main = paste('G = ', is$est.cp.list[[rr]]$G, sep = '')) # change point detector 
   abline(v = sd$cp.idio, col = 2, lty = 3) # true change points
   abline(v = is$est.cp.list[[rr]]$cp, col = 4, lty = 2) # change point estimators
-  abline(h = is$est.cp.list[[rr]]$thr, col = 4) # threshold
+  abline(h = is$est.cp.list[[rr]]$thr, col = 4) # threshold
 }
 ```
 

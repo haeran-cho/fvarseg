@@ -34,7 +34,7 @@
 #' cp.idio = c(3, 5)/8, seed = 123
 #' cs <- common.seg(out$x)
 #' cs$est.cp
-#' is <- idio.seg(sd$x, common.out = cs, d = 1)
+#' is <- idio.seg(out$x, common.out = cs, d = 1)
 #' is$est.cp
 #' }
 #' @references H. Cho, I. Eckley, P. Fearnhead and H. Maeng (2022) High-dimensional time series segmentation via factor-adjusted vector autoregressive modelling. arXiv preprint arXiv: TODO
