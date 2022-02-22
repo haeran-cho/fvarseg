@@ -2,13 +2,14 @@
 #' @description 
 #' @details See Algorithm 2 of Cho, Eckley, Fearnhead and Maeng (2022) for further details.
 #' @param x input time series matrix, with each row representing a variable
-#' @param demean whether to de-mean the input \code{x} row-wise
+#' @param center whether to de-mean the input \code{x} row-wise
+#' @param common.out output from \link[fvarseg]{common.seg}; if \code{common.out = NULL}, \code{x} is regarded as a piecewise stationary VAR process
 #' @param q an integer specifying the number of factors. If \code{q = NULL}, the factor number is estimated by an information criterion-based approach of Hallin and Liška (2007) for each segment
 #' @param d an integer specifying the VAR order
 #' @param G.seq a sequence of integers [TO DO]
 #' @param thr 
 #' @param eta 
-#' @param cv.args a list specifying the tuning parameters required for Dantzig selector tuning parameter selection via cross-validation:
+#' @param cv.args a list specifying the tuning parameters required for Dantzig selector tuning parameter selection via cross-validation. It contains:
 #' \itemize{
 #'    \item{\code{n.folds}}{ number of folds}
 #'    \item{\code{path.length}}{ number of regularisation parameter values to consider; a sequence is generated automatically based in this value}
@@ -27,12 +28,11 @@
 #' }}
 #' \item{mean.x}{ if \code{center = TRUE}, returns a vector containing row-wise sample means of \code{x}; if \code{center = FALSE}, returns a vector of zeros}
 #'
-#' @importFrom quantreg predict.rq
 #' @importFrom fnets dyn.pca yw.cv var.dantzig 
 #' @references H. Cho, I. Eckley, P. Fearnhead and H. Maeng (2022) High-dimensional time series segmentation via factor-adjusted vector autoregressive modelling. arXiv preprint arXiv: TODO
 #' @references Hallin, M. & Liška, R. (2007) Determining the number of factors in the general dynamic factor model. Journal of the American Statistical Association, 102(478), 603--617.
 #' @export
-idio.seg <- function(x, demean = TRUE, common.seg.out, q = NULL, d = 1, 
+idio.seg <- function(x, center = TRUE, common.out = NULL, q = NULL, d = 1, 
                      G.seq = NULL, thr = NULL, eta = .5, 
                      cv.args = list(path.length = 10, n.folds = 1, do.cv = FALSE)){
   
@@ -40,22 +40,27 @@ idio.seg <- function(x, demean = TRUE, common.seg.out, q = NULL, d = 1,
   n <- dim(x)[2]
   
   IDIO_INDEX <- 3
-  load("idio_thr.RData")
-  load("idio_thr0.RData")
-  
-  if(demean) mean.x <- apply(x, 1, mean) else mean.x <- rep(0, p)
+  load("data/idio_thr.RData")
+
+  if(center) mean.x <- apply(x, 1, mean) else mean.x <- rep(0, p)
   xx <- x - mean.x
   
   # rule <- match.arg(rule, c('eta', 'epsilon'))
   rule <- 'eta'
   
-  est.cp.common <- common.seg.out$est.cp[, 1]
-  K <- length(est.cp.common)
-  if(K >= 1) est.cp.common <- sort(est.cp.common)
+  if(!is.null(common.out)){
+    est.cp.common <- common.out$est.cp[, 1]
+    K <- length(est.cp.common)
+    if(K >= 1) est.cp.common <- sort(est.cp.common)
+    ll <- floor(min(cs$G.seq[1]^(1/3), n/(2 * log(n))))
+  } else {
+    est.cp.common <- c()
+    ll <- floor(min(c(n/10, 2 * p)^(1/3), n/(2 * log(n))))
+  }
   brks <- c(0, est.cp.common, n)
   idx <- rep(c(1:(length(brks) - 1)), diff(brks))
   lll <- max(1, 4 * floor((min(diff(brks))/log(min(diff(brks))))^(1/3)))
-  ll <- max(1, d, min(floor(min((n/10)^(1/3), n/(2 * log(n)))), lll))
+  ll <- max(1, d, min(ll, lll))
   pcfa <- post.cp.fa(xx, est.cp.common, q, 5, lll)
   Gamma_c <- pcfa$Gamma_c[,, 1:(ll + 1),, drop = FALSE]
   
@@ -68,9 +73,8 @@ idio.seg <- function(x, demean = TRUE, common.seg.out, q = NULL, d = 1,
   if(is.null(thr) | length(thr) != length(G.seq)){
     thr <- c()
     if(K >= 1 | sum(pcfa$q.seq > 0)){
-      for(ii in 1:length(G.seq)) thr <- c(thr, exp(quantreg::predict.rq(idio.fit.list[[IDIO_INDEX]], list(n = n, p = p, G = G.seq[ii]))))
+      for(ii in 1:length(G.seq)) thr <- c(thr, exp(predict(idio.fit.list[[IDIO_INDEX]], list(n = n, p = p, G = G.seq[ii]))))
     } else thr <- rep(1, length(G.seq))
-      # for(ii in 1:length(G.seq)) thr <- c(thr, exp(quantreg::predict.rq(idio.fit.list0[[IDIO_INDEX]], list(n = n, p = p, G = G.seq[ii]))))
   }
   
   idio.list <- list()
@@ -224,98 +228,3 @@ post.cp.fa <- function(xx, est.cp.common, q = NULL, ic.op = 5, ll){
   return(ls)
   
 }
-
-
-#' #' @importFrom parallel makePSOCKcluster stopCluster detectCores
-#' #' @importFrom doParallel registerDoParallel
-#' #' @importFrom foreach foreach %dopar%
-#' #' @importFrom lpSolve lp
-#' #' @keywords internal
-#' idio.beta <- function(GG, gg, lambda, n.cores = min(parallel::detectCores() - 1, 3)){
-#'   
-#'   p <- dim(gg)[2]
-#'   d <- dim(gg)[1]/dim(gg)[2]
-#'   beta <- gg * 0
-#'   
-#'   f.obj <- rep(1, 2 * p * d)
-#'   f.con <- rbind(-GG, GG)
-#'   f.con <- cbind(f.con,-f.con)
-#'   f.dir <- rep('<=', 2 * p * d)
-#'   
-#'   cl <- parallel::makePSOCKcluster(n.cores)
-#'   doParallel::registerDoParallel(cl)
-#'   
-#'   beta <- foreach::foreach(ii = 1:p, .combine = 'cbind', .multicombine = TRUE, .export = c('lp')) %dopar% {
-#'     b1 <- rep(lambda, p * d) - gg[, ii]
-#'     b2 <- rep(lambda, p * d) + gg[, ii]
-#'     f.rhs <- c(b1, b2)
-#'     lpout <- lp('min', f.obj, f.con, f.dir, f.rhs)
-#'     lpout$solution[1:(p * d)] - lpout$solution[-(1:(p * d))]
-#'   }
-#'   parallel::stopCluster(cl)
-#'   
-#'   out <- list(beta = beta, lambda = lambda, Gamma = Gamma)
-#'   return(out)
-#'   
-#' }
-
-#' #' @keywords internal
-#' idio.cv <- function(xx, Gamma_c, idx, lambda.max = NULL, var.order = 1, 
-#'                     path.length = 10, n.folds = 1, do.plot = FALSE){
-#'   
-#'   nn <- ncol(xx)
-#'   p <- nrow(xx)
-#'   dd <- max(1, min(max(var.order), dim(Gamma_c)[3] - 1))
-#'   K <- dim(Gamma_c)[4] - 1
-#'   
-#'   if(is.null(lambda.max)) lambda.max <- max(abs(xx %*% t(xx)/nn)) * 1
-#'   lambda.path <- round(exp(seq(log(lambda.max), log(lambda.max * .005), length.out = path.length)), digits = 10)
-#'   
-#'   cv.err.mat <- matrix(0, nrow = path.length, ncol = length(var.order))
-#'   ind.list <- split(1:nn, ceiling(n.folds*(1:nn)/nn)) 
-#'   
-#'   for(fold in 1:n.folds){ 
-#'     ind <- 1:ceiling(length(ind.list[[fold]]) * .5)
-#'     tx <- xx[, ind.list[[fold]][ind]]
-#'     tb <- tabulate(idx[ind.list[[fold]][ind]], nbins = K + 1)
-#'     train.acv <- acv.x(tx, dd)$Gamma_x[,, 1:(dd + 1), drop = FALSE]
-#'     for(ii in 1:(K + 1)) train.acv <- train.acv - tb[ii]/length(ind) * Gamma_c[,, 1:(dd + 1), ii]
-#'     
-#'     ind <- setdiff(1:length(ind.list[[fold]]), ind)
-#'     tx <- xx[, ind.list[[fold]][ind]]
-#'     tb <- tabulate(idx[ind.list[[fold]][ind]], nbins = K + 1)
-#'     test.acv <- acv.x(tx, dd)$Gamma_x[,, 1:(dd + 1), drop = FALSE]
-#'     for(ii in 1:(K + 1)) test.acv <- test.acv - tb[ii]/length(ind) * Gamma_c[,, 1:(dd + 1), ii]
-#'     
-#'     for(jj in 1:length(var.order)){
-#'       if(var.order[jj] >= dim(train.acv)[3]){
-#'         cv.err.mat[, jj] <- Inf
-#'         next
-#'       }
-#'       mg <- make.gg(train.acv, var.order[jj])
-#'       gg <- mg$gg; GG <- mg$GG
-#'       mg <- make.gg(test.acv, var.order[jj])
-#'       test.gg <- mg$gg; test.GG <- mg$GG
-#'       for(ii in 1:path.length){
-#'         train.beta <- idio.beta(GG, gg, lambda = lambda.path[ii])$beta
-#'         beta.gg <- t(train.beta) %*% test.gg
-#'         cv.err.mat[ii, jj] <- cv.err.mat[ii, jj] + 
-#'           sum(diag(test.acv[,, 1] - beta.gg - t(beta.gg) + t(train.beta) %*% test.GG %*% train.beta))
-#'       }
-#'     }
-#'   }
-#'   
-#'   cv.err.mat[cv.err.mat < 0] <- Inf
-#'   lambda.min <- min(lambda.path[apply(cv.err.mat, 1, min) == min(apply(cv.err.mat, 1, min))])
-#'   order.min <- min(var.order[apply(cv.err.mat, 2, min) == min(apply(cv.err.mat, 2, min))])
-#'   
-#'   if(do.plot){
-#'     matplot(lambda.path, cv.err.mat, type = 'b', col = 2:(length(var.order) + 1), pch = 2:(length(var.order) + 1), log = 'x', xlab = 'λ (log scale)', ylab = 'CV error')
-#'     abline(v = lambda.min)
-#'     legend('topleft', legend = var.order, col = 2:(length(var.order) + 1), pch = 2:(length(var.order) + 1), lty = 1)
-#'   }
-#'   
-#'   out <- list(lambda = lambda.min, var.order = order.min,  cv.error = cv.err.mat, lambda.path = lambda.path)
-#'   return(out) 
-#'   
-#' }

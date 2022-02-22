@@ -1,11 +1,12 @@
-#' @title Simulate a piecewise stationary, factor-adjusted VAR process
+#' @title Simulate a piecewise stationary factor-adjusted VAR process
 #' @importFrom fnets var.to.vma
 #' @export
 sim.data <- function(n, p, q = 2,  
-                      cp.common = round(n * 1:3 / 4), den.common = .5, type.common = c('ma', 'ar')[1], ma.order = 2,
+                      cp.common = round(n * 1:3 / 4), den.common = .5, type.common = c('ma', 'ar'), ma.order = 2,
                       cp.idio = round(n * c(3, 5) / 8), d = 1, size.idio = 1, 
                       do.scale = TRUE, seed = NULL){
   
+  type.common <- match.arg(type.common, c('ma', 'ar'))
   burnin <- 100
   if(!is.null(seed)) set.seed(seed)
   
@@ -97,7 +98,7 @@ sim.data <- function(n, p, q = 2,
     x <- chi + xi
   } else x <- xi
   
-  out <- list(x = x, xi = xi, A.list = A.list)
+  out <- list(x = x, xi = xi, A.list = A.list, cp.common = cp.common, cp.idio = cp.idio)
   return(out)
 }
 

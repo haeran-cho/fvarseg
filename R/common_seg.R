@@ -1,8 +1,10 @@
+# TODO: remove load
+
 #' @title Segment factor-driven common component
 #' @description 
 #' @details See Algorithm 1 of Cho, Eckley, Fearnhead and Maeng (2022) for further details.
 #' @param x input time series matrix, with each row representing a variable
-#' @param demean whether to de-mean the input \code{x} row-wise
+#' @param center whether to de-mean the input \code{x} row-wise
 #' @param G.seq a sequence of integers [TO DO]
 #' @param thr 
 #' @param tt.by 
@@ -22,22 +24,21 @@
 #' }}
 #' \item{mean.x}{ if \code{center = TRUE}, returns a vector containing row-wise sample means of \code{x}; if \code{center = FALSE}, returns a vector of zeros}
 #'
-#' @importFrom quantreg predict.rq
 #' @references H. Cho, I. Eckley, P. Fearnhead and H. Maeng (2022) High-dimensional time series segmentation via factor-adjusted vector autoregressive modelling. arXiv preprint arXiv: TODO
 #' @export
-common.seg <- function(x, demean = TRUE, G.seq = NULL, thr = NULL, 
+common.seg <- function(x, center = TRUE, G.seq = NULL, thr = NULL, 
                        tt.by = floor(2 * log(dim(x)[2])), eta = .5){
   
   p <- dim(x)[1]
   n <- dim(x)[2]
   
   COMMON_INDEX <- 2
-  load("common_thr.RData")
+  load("data/common_thr.RData")
   
   if(is.null(G.seq)) G.seq <- round(n * c(1/10, 1/8, 1/6, 1/4)) else G.seq <- round(sort(G.seq, decreasing = FALSE))
   if(is.null(thr) | length(thr) != length(G.seq)){
     thr <- c()
-    for(ii in 1:length(G.seq)) thr <- c(thr, exp(quantreg::predict.rq(common.fit.list[[COMMON_INDEX]], list(n = n, p = p, G = G.seq[ii]))))
+    for(ii in 1:length(G.seq)) thr <- c(thr, exp(predict(common.fit.list[[COMMON_INDEX]], list(n = n, p = p, G = G.seq[ii]))))
   }
   
   # rule <- match.arg(rule, c('eta', 'epsilon'))
@@ -48,7 +49,7 @@ common.seg <- function(x, demean = TRUE, G.seq = NULL, thr = NULL,
   do.check <- FALSE
   do.plot <- FALSE
   
-  if(demean) mean.x <- apply(x, 1, mean) else mean.x <- rep(0, p)
+  if(center) mean.x <- apply(x, 1, mean) else mean.x <- rep(0, p)
   xx <- x - mean.x
   
   common.list <- list()

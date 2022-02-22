@@ -1,4 +1,4 @@
-Package: fnets.segment
+Package: fvarseg
 Type: Package
 Title: 
 Version: 0.1.0
@@ -9,10 +9,9 @@ Authors@R: c(
     person("Idris", "Eckley", email = "", role = "aut")
     )
 Maintainer: Haeran Cho <haeran.cho@bristol.ac.uk>
-Description: Implements 
+Description: Implements TODO
 Depends: R (>= 3.1.2)
 Imports: 
-    quantreg,
     fnets
 License: GPL (>= 3)
 Encoding: UTF-8
