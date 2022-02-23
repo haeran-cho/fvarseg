@@ -36,14 +36,14 @@
 #'
 #' @examples
 #' \dontrun{
-#' out <- sim.data(n = 2000, p = 100, q = 2, d = 1,
+#' out <- sim.data(n = 2000, p = 50, q = 2, d = 1,
 #' cp.common = 1:3/4, den.common = .5, type.common = 'ma', 
 #' cp.idio = c(3, 5)/8, seed = 123)
-#' fs <- fvar.seg(out$x, d = 1)
+#' fs <- fvar.seg(out$x, q = NULL, d = 1)
 #' fs$common.out$est.cp
 #' fs$idio.out$est.cp
 #' }
-#' @references H. Cho, I. Eckley, P. Fearnhead and H. Maeng (2022) High-dimensional time series segmentation via factor-adjusted vector autoregressive modelling. arXiv preprint arXiv: TODO
+#' @references Cho, H., Eckley, I., Fearnhead, P. & Maeng, H. (2022) High-dimensional time series segmentation via factor-adjusted vector autoregressive modelling. arXiv preprint arXiv: TODO
 #' @references Hallin, M. & Liška, R. (2007) Determining the number of factors in the general dynamic factor model. Journal of the American Statistical Association, 102(478), 603--617.
 #' @export
 fvar.seg <- function(x, center = TRUE, q = NULL, d = 1, eta = .5,

@@ -56,10 +56,10 @@ a list containing
 Generate time series used in the simulation studies of Cho, Eckley, Fearnhead and Maeng (2022) for further details.
 }
 \examples{
-out <- sim.data(n = 2000, p = 100, q = 2, d = 1,
+out <- sim.data(n = 2000, p = 50, q = 2, d = 1,
 cp.common = 1:3/4, den.common = .5, type.common = 'ma', 
 cp.idio = c(3, 5)/8, seed = 123)
 }
 \references{
-H. Cho, I. Eckley, P. Fearnhead and H. Maeng (2022) High-dimensional time series segmentation via factor-adjusted vector autoregressive modelling. arXiv preprint arXiv: TODO
+Cho, H., Eckley, I., Fearnhead, P. & Maeng, H. (2022) High-dimensional time series segmentation via factor-adjusted vector autoregressive modelling. arXiv preprint arXiv: TODO
 }
