@@ -6,7 +6,8 @@
 #' @param q an integer specifying the number of factors. If \code{q = NULL}, the factor number is estimated by an information criterion-based approach of Hallin and Liška (2007) for each segment
 #' @param d an integer specifying the VAR order
 #' @param G.seq an integer vector of bandwidth; if \code{G.seq = NULL}, a default choice \code{G.seq = round(seq(2.5 * p, n / min(4, n/(3 * p))} is used when common component is present and \code{G.seq = round(seq(2 * p, n / min(5, n/(2 * p))} when it is absent
-#' @param thr a vector of thresholds which is of the same length as \code{G.seq}; if \code{thr = NULL}, a default choice based on simulations is used
+#' @param thr a vector of thresholds which is of the same length as \code{G.seq}; if \code{thr = NULL}, a default choice based on numerical experiments is used
+#' @param alpha used when \code{thr = NULL} for default threshold selection, which relates to the quantile used in numerical experiments; \code{alpha = 0.05} and \code{alpha = 0.1} are supported
 #' @param eta a constant between \code{0} and \code{1}; the bottom-up merging across the multiple bandwidths \code{G.seq} depends on this parameter
 #' @param cv.args a list specifying the tuning parameters required for Dantzig selector tuning parameter selection via cross-validation. It contains:
 #' \itemize{
@@ -42,14 +43,14 @@
 #' @importFrom stats predict.lm
 #' @export
 idio.seg <- function(x, center = TRUE, common.out = NULL, q = NULL, d = 1, 
-                     G.seq = NULL, thr = NULL, eta = .5, 
+                     G.seq = NULL, thr = NULL, alpha = .05, eta = .5, 
                      cv.args = list(path.length = 10, n.folds = 1, do.cv = FALSE)){
   
   p <- dim(x)[1]
   n <- dim(x)[2]
   
-  IDIO_INDEX <- 3
-
+  if(alpha == .1) IDIO_INDEX <- 2 else if(alpha == .05) IDIO_INDEX <- 3
+  
   if(center) mean.x <- apply(x, 1, mean) else mean.x <- rep(0, p)
   xx <- x - mean.x
   
@@ -67,10 +68,10 @@ idio.seg <- function(x, center = TRUE, common.out = NULL, q = NULL, d = 1,
   }
   brks <- c(0, est.cp.common, n)
   idx <- rep(c(1:(length(brks) - 1)), diff(brks))
-  lll <- max(1, 4 * floor((min(diff(brks))/log(min(diff(brks))))^(1/3)))
-  ll <- max(1, d, min(ll, lll))
+  lll <- max(d, 4 * floor((min(diff(brks))/log(min(diff(brks))))^(1/3)))
+  ll <- max(1, min(ll, lll))
   pcfa <- post.cp.fa(xx, est.cp.common, q, 5, lll)
-  Gamma_c <- pcfa$Gamma_c[,, 1:(ll + 1),, drop = FALSE]
+  Gamma_c <- pcfa$Gamma_c[,, 1:(max(d, ll) + 1),, drop = FALSE]
   
   if(is.null(G.seq)){
     if(K >= 1 | sum(pcfa$q.seq > 0)){
@@ -113,17 +114,17 @@ idio.seg <- function(x, center = TRUE, common.out = NULL, q = NULL, d = 1,
         
         dpca.l <- dyn.pca(xx[, int[1:round(G/2)]], q = dpca$q, ic.op = 5, mm = ll)
         dpca.r <- dyn.pca(xx[, int[-(1:round(G/2))]], q = dpca$q, ic.op = 5, mm = ll)
-        dgi <- dpca.l$acv$Gamma_i[,, 1:(ll + 1)] - dpca.r$acv$Gamma_i[,, 1:(ll + 1)]
+        dgi <- (dpca.l$acv$Gamma_i - dpca.r$acv$Gamma_i)[,, 1:(ll + 1)]
         null.norm <- max(abs(dgi))
      }
       
-      diff.Gamma_x <- acv.x(xx[, int, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE] -
-        acv.x(xx[, int + G, drop = FALSE], ll)$Gamma_x[,, 1:(ll + 1), drop = FALSE]
+      diff.Gamma_x <- acv.x(xx[, int, drop = FALSE], max(d, ll))$Gamma_x[,, 1:(max(d, ll) + 1), drop = FALSE] -
+        acv.x(xx[, int + G, drop = FALSE], ll)$Gamma_x[,, 1:(max(d, ll) + 1), drop = FALSE]
       diff.Gamma_c <- diff.Gamma_x * 0
       if(K > 0){
         common.weights <- tabulate(idx[int], nbins = K + 1) -
           tabulate(idx[int + G], nbins = K + 1)
-        for(kk in 1:(K + 1)) diff.Gamma_c <- diff.Gamma_c + common.weights[kk] / G * Gamma_c[,,, kk]
+        for(kk in 1:(K + 1)) diff.Gamma_c <- diff.Gamma_c + common.weights[kk] / G * Gamma_c[,, 1:(max(d, ll) + 1), kk]
       }
       
       mgd <- make.gg(diff.Gamma_x - diff.Gamma_c, d)
@@ -133,7 +134,7 @@ idio.seg <- function(x, center = TRUE, common.out = NULL, q = NULL, d = 1,
       tt <- vv + 1
       check.theta <- tt.max <- n - G
       while(tt <= tt.max){
-        for(h in 0:ll){
+        for(h in 0:max(d, ll)){
           diff.Gamma_x[,, h + 1] <- diff.Gamma_x[,, h + 1] -
             xx[, tt - G, drop = FALSE] %*% t(xx[, tt - G + h, drop = FALSE]) / G +
             xx[, tt - h, drop = FALSE] %*% t(xx[, tt, drop = FALSE]) / G +
@@ -144,7 +145,7 @@ idio.seg <- function(x, center = TRUE, common.out = NULL, q = NULL, d = 1,
         if(K > 0){
           common.weights <- tabulate(idx[(tt - G + 1):tt], nbins = K + 1) -
             tabulate(idx[(tt + 1):(tt + G)], nbins = K + 1)
-          for(kk in 1:(K + 1)) diff.Gamma_c <- diff.Gamma_c + common.weights[kk] / G * Gamma_c[,,, kk]
+          for(kk in 1:(K + 1)) diff.Gamma_c <- diff.Gamma_c + common.weights[kk] / G * Gamma_c[,, 1:(max(d, ll) + 1), kk]
         }
         mgd <- make.gg(diff.Gamma_x - diff.Gamma_c, d)
         stat[tt] <- max(abs(mgd$GG %*% beta - mgd$gg)) / null.norm

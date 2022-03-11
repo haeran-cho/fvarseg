@@ -3,7 +3,8 @@
 #' @param x input time series matrix, with each row representing a variable
 #' @param center whether to de-mean the input \code{x} row-wise
 #' @param G.seq an integer vector of bandwidth; if \code{G.seq = NULL}, a default choice \code{G.seq = round(n * 1/c(10, 8, 6, 4))} is used
-#' @param thr a vector of thresholds which is of the same length as \code{G.seq}; if \code{thr = NULL}, a default choice based on simulations is used
+#' @param thr a vector of thresholds which is of the same length as \code{G.seq}; if \code{thr = NULL}, a default choice based on numerical experiments is used
+#' @param alpha used when \code{thr = NULL} for default threshold selection, which relates to the quantile used in numerical experiments; \code{alpha = 0.05} and \code{alpha = 0.1} are supported
 #' @param tt.by an integer specifying the grid over which the test statistic is computed, which is \code{round(seq(G, dim(x)[2] - G, by = tt.by))} for each bandwidth \code{G}
 #' @param eta a constant between \code{0} and \code{1}; each local maximiser of the test statistic within its \code{eta * G}-environment for the common component is deemed as a change point estimator. Also the bottom-up merging across the multiple bandwidths \code{G.seq} depends on this parameter
 #'
@@ -32,13 +33,13 @@
 #' @importFrom stats predict.lm
 #' @references Cho, H., Eckley, I., Fearnhead, P. & Maeng, H. (2022) High-dimensional time series segmentation via factor-adjusted vector autoregressive modelling. arXiv preprint arXiv: TODO
 #' @export
-common.seg <- function(x, center = TRUE, G.seq = NULL, thr = NULL, 
+common.seg <- function(x, center = TRUE, G.seq = NULL, thr = NULL, alpha = .1,
                        tt.by = floor(2 * log(dim(x)[2])), eta = .5){
   
   p <- dim(x)[1]
   n <- dim(x)[2]
   
-  COMMON_INDEX <- 2
+  if(alpha == .1) COMMON_INDEX <- 2 else if(alpha == .05) COMMON_INDEX <- 3
 
   if(is.null(G.seq)) G.seq <- round(n * c(1/10, 1/8, 1/6, 1/4)) else G.seq <- round(sort(G.seq, decreasing = FALSE))
   if(is.null(thr) | length(thr) != length(G.seq)){
