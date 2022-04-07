@@ -38,7 +38,7 @@
 #' is <- idio.seg(out$x, common.out = cs, d = 1)
 #' is$est.cp
 #' }
-#' @references Cho, H., Eckley, I., Fearnhead, P. & Maeng, H. (2022) High-dimensional time series segmentation via factor-adjusted vector autoregressive modelling. arXiv preprint arXiv: TODO
+#' @references Cho, H., Eckley, I., Fearnhead, P. & Maeng, H. (2022) High-dimensional time series segmentation via factor-adjusted vector autoregressive modelling. arXiv preprint arXiv:2204.02724
 #' @references Hallin, M. & Liška, R. (2007) Determining the number of factors in the general dynamic factor model. Journal of the American Statistical Association, 102(478), 603--617.
 #' @importFrom stats predict.lm
 #' @export

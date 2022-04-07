@@ -31,7 +31,7 @@
 #' cs$est.cp
 #' }
 #' @importFrom stats predict.lm
-#' @references Cho, H., Eckley, I., Fearnhead, P. & Maeng, H. (2022) High-dimensional time series segmentation via factor-adjusted vector autoregressive modelling. arXiv preprint arXiv: TODO
+#' @references Cho, H., Eckley, I., Fearnhead, P. & Maeng, H. (2022) High-dimensional time series segmentation via factor-adjusted vector autoregressive modelling. arXiv preprint arXiv:2204.02724
 #' @export
 common.seg <- function(x, center = TRUE, G.seq = NULL, thr = NULL, alpha = .1,
                        tt.by = floor(2 * log(dim(x)[2])), eta = .5){

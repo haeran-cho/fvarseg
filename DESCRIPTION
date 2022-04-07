@@ -9,7 +9,7 @@ Authors@R: c(
     person("Idris", "Eckley", email = "i.eckley@lancaster.ac.uk", role = "aut")
     )
 Maintainer: Haeran Cho <haeran.cho@bristol.ac.uk>
-Description: Implements a two-stage time series segmentation methodology that first detects change points in the factor-driven common component, and then detects change points in the idiosyncratic vector autoregressive process.
+Description: Implements a two-stage time series segmentation methodology proposed in <arXiv:2204.02724>. It first detects change points in the factor-driven common component, and then detects change points in the idiosyncratic vector autoregressive process.
 Depends: R (>= 4.1.0)
 Imports: 
     lpSolve,

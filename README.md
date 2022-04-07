@@ -3,7 +3,7 @@ Implements a method for high-dimensional time series segmentation under a piecew
 
 > High-dimensional time series segmentation via factor-adjusted vector autoregressive modelling
 
-by Haeran Cho, Idris Eckley, Paul Fearnhead and Hyeyoung Maeng [arXiv:](https://arxiv.org/abs/) for full details.
+by Haeran Cho, Idris Eckley, Paul Fearnhead and Hyeyoung Maeng [arXiv:2204.02724](https://arxiv.org/abs/2204.02724) for full details.
 
 ## Installation
 
