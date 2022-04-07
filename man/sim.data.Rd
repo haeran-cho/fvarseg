@@ -61,5 +61,5 @@ cp.common = 1:3/4, den.common = .5, type.common = 'ma',
 cp.idio = c(3, 5)/8, seed = 123)
 }
 \references{
-Cho, H., Eckley, I., Fearnhead, P. & Maeng, H. (2022) High-dimensional time series segmentation via factor-adjusted vector autoregressive modelling. arXiv preprint arXiv: TODO
+Cho, H., Eckley, I., Fearnhead, P. & Maeng, H. (2022) High-dimensional time series segmentation via factor-adjusted vector autoregressive modelling. arXiv preprint arXiv:2204.02724
 }

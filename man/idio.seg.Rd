@@ -12,6 +12,7 @@ idio.seg(
   d = 1,
   G.seq = NULL,
   thr = NULL,
+  alpha = 0.05,
   eta = 0.5,
   cv.args = list(path.length = 10, n.folds = 1, do.cv = FALSE)
 )
@@ -29,7 +30,9 @@ idio.seg(
 
 \item{G.seq}{an integer vector of bandwidth; if \code{G.seq = NULL}, a default choice \code{G.seq = round(seq(2.5 * p, n / min(4, n/(3 * p))} is used when common component is present and \code{G.seq = round(seq(2 * p, n / min(5, n/(2 * p))} when it is absent}
 
-\item{thr}{a vector of thresholds which is of the same length as \code{G.seq}; if \code{thr = NULL}, a default choice based on simulations is used}
+\item{thr}{a vector of thresholds which is of the same length as \code{G.seq}; if \code{thr = NULL}, a default choice based on numerical experiments is used}
+
+\item{alpha}{used when \code{thr = NULL} for default threshold selection, which relates to the quantile used in numerical experiments; \code{alpha = 0.05} and \code{alpha = 0.1} are supported}
 
 \item{eta}{a constant between \code{0} and \code{1}; the bottom-up merging across the multiple bandwidths \code{G.seq} depends on this parameter}
 
@@ -72,7 +75,7 @@ is$est.cp
 }
 }
 \references{
-Cho, H., Eckley, I., Fearnhead, P. & Maeng, H. (2022) High-dimensional time series segmentation via factor-adjusted vector autoregressive modelling. arXiv preprint arXiv: TODO
+Cho, H., Eckley, I., Fearnhead, P. & Maeng, H. (2022) High-dimensional time series segmentation via factor-adjusted vector autoregressive modelling. arXiv preprint arXiv:2204.02724
 
 Hallin, M. & Liška, R. (2007) Determining the number of factors in the general dynamic factor model. Journal of the American Statistical Association, 102(478), 603--617.
 }

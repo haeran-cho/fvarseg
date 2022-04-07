@@ -9,6 +9,7 @@ common.seg(
   center = TRUE,
   G.seq = NULL,
   thr = NULL,
+  alpha = 0.1,
   tt.by = floor(2 * log(dim(x)[2])),
   eta = 0.5
 )
@@ -20,7 +21,9 @@ common.seg(
 
 \item{G.seq}{an integer vector of bandwidth; if \code{G.seq = NULL}, a default choice \code{G.seq = round(n * 1/c(10, 8, 6, 4))} is used}
 
-\item{thr}{a vector of thresholds which is of the same length as \code{G.seq}; if \code{thr = NULL}, a default choice based on simulations is used}
+\item{thr}{a vector of thresholds which is of the same length as \code{G.seq}; if \code{thr = NULL}, a default choice based on numerical experiments is used}
+
+\item{alpha}{used when \code{thr = NULL} for default threshold selection, which relates to the quantile used in numerical experiments; \code{alpha = 0.05} and \code{alpha = 0.1} are supported}
 
 \item{tt.by}{an integer specifying the grid over which the test statistic is computed, which is \code{round(seq(G, dim(x)[2] - G, by = tt.by))} for each bandwidth \code{G}}
 
@@ -57,5 +60,5 @@ cs$est.cp
 }
 }
 \references{
-Cho, H., Eckley, I., Fearnhead, P. & Maeng, H. (2022) High-dimensional time series segmentation via factor-adjusted vector autoregressive modelling. arXiv preprint arXiv: TODO
+Cho, H., Eckley, I., Fearnhead, P. & Maeng, H. (2022) High-dimensional time series segmentation via factor-adjusted vector autoregressive modelling. arXiv preprint arXiv:2204.02724
 }
