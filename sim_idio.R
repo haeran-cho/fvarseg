@@ -49,7 +49,7 @@ for(nn in 1:length(n.seq)){
         if(jj <= 2) G.seq <- round(seq(2.5 * p, n / min(4, n / (3 * p)), length.out = 4))
         if(jj == 3) G.seq <- round(seq(2 * p, n / min(5, n / (2.5 * p)), length.out = 4))
         
-        for(gg in 1:3){
+        for(gg in 1:4){
           G <- G.seq[gg]
           
           ll <- max(1, floor(G^(1/3)))
@@ -214,15 +214,15 @@ exp(predict(fit, list(n = n, p = p, G = G)))
 n.seq <- 250 * c(4, 8, 16)
 p.seq <- 25 * c(2, 4, 6)
 
-kk <- 1
+kk <- 2
 
-qu <- c(.9, .95, .99)
+qu <- c(.8, .9, .95)
 yy <- xx <- c()
 for(nn in 1:3){
   n <- n.seq[nn]
   for(pp in 1:3){
     p <- p.seq[pp]
-    if(kk == 1) G.seq <- sort(round(seq(2 * p, n / min(5, n/(p * 2.5)), length.out = 4)))
+    if(kk == 1) G.seq <- sort(round(seq(2 * p, n / min(4, n/(p * 2.5)), length.out = 4)))
     if(kk == 2) G.seq <- sort(round(seq(2.5 * p, n / min(5, n/(p * 3)), length.out = 4)))
     
     for(gg in 1:4){
@@ -263,9 +263,9 @@ for(jj in 1:3){
   fit <- lm(log(y) ~ 0 + I(log(log(n))) + I(log(log(p))) + I(log(G)), data = df)  
   idio.fit.list[[jj]] <- fit
   
-  if(jj == 1){
-    plot(exp(fitted(fit)), y); abline(a = 0, b = 1, col = 1)
-  } else points(exp(fitted(fit)), y, col = jj)
+  # if(jj == 1){
+  #   plot(exp(fitted(fit)), y); abline(a = 0, b = 1, col = 1)
+  # } else points(exp(fitted(fit)), y, col = jj)
 }
 
 idio.fit.list0 <- idio.fit.list
@@ -284,14 +284,14 @@ library(quantreg)
 n.seq <- 250 * c(4, 8, 16)
 p.seq <- 25 * c(2, 4, 6)
 
-kk <- 1
+kk <- 2
 
 yx <- c()
 for(nn in 1:3){
   n <- n.seq[nn]
   for(pp in 1:3){
     p <- p.seq[pp]
-    if(kk == 1) G.seq <- sort(round(seq(2 * p, n / min(5, n/(p * 2.5)), length.out = 4)))
+    if(kk == 1) G.seq <- sort(round(seq(2 * p, n / min(4, n/(p * 2.5)), length.out = 4)))
     if(kk == 2) G.seq <- sort(round(seq(2.5 * p, n / min(5, n/(p * 3)), length.out = 4)))
     
     for(ll in 1:2){
@@ -319,6 +319,8 @@ df <- data.frame(y = yx[, 1], n = yx[, 2], p = yx[, 3], G = yx[, 4])
 fit <- rq(log(y) ~ 0 + I(log(log(n))) + I(log(log(p))) + I(log(G)), tau = .95, data = df)
 summary(fit)
 
+plot(exp(fitted(fit)), df$y)
+
 rho <- function(u, tau = .5) u*(tau - (u < 0))
 1 - sum(rho(fit$resid, fit$tau))/ sum(rho(log(df$y), fit$tau))
 
@@ -332,17 +334,25 @@ for(jj in 1:3){
 idio.fit.list0 <- idio.fit.list
 save(idio.fit.list0, file = 'new_idio_fit0.RData')
 
-n <- 4000
-p <- 150
+n <- 2000
+p <- 100
+G.seq <- sort(round(seq(2.5 * p, n / min(4, n/(p * 3)), length.out = 4)))
 G.seq <- sort(round(seq(2 * p, n / min(5, n/(p * 2.5)), length.out = 4)))
-G.seq <- sort(round(seq(2.5 * p, n / min(5, n/(p * 3)), length.out = 4)))
 
-exp(predict(fit, list(n = n, p = p, G = G.seq[2])))
-exp(predict(idio.fit.list0[[3]], list(n = n, p = p, G = G.seq[2])))
+for(gg in 1:4) print(c(exp(predict(fit, list(n = n, p = p, G = G.seq[gg]))),
+                       exp(predict(idio.fit.list[[3]], list(n = n, p = p, G = G.seq[gg])))))
+
 
 load(file = paste('archive/idio2_n', n, 'p', p, 'd', 1, 'K', 1, '.RData', sep = ''))
-apply(rbind(idio.out[,, 2, 1, 1], idio.out[,, 2, 1, 2]), 2, quantile, .95)
-apply(idio.out[,, 2, 1, 3], 2, quantile, .95)
+tmp <- rbind(idio.out[,, 2, 1, 1], idio.out[,, 2, 1, 2])
+load(file = paste('archive/idio2_n', n, 'p', p, 'd', 2, 'K', 100, '.RData', sep = ''))
+tmp <- rbind(tmp, rbind(idio.out[,, 2, 1, 1], idio.out[,, 2, 1, 2]))
+apply(tmp, 2, quantile, .95)
 
+load(file = paste('archive/idio2_n', n, 'p', p, 'd', 1, 'K', 1, '.RData', sep = ''))
+tmp <-idio.out[,, 2, 1, 3]
+load(file = paste('archive/idio2_n', n, 'p', p, 'd', 2, 'K', 100, '.RData', sep = ''))
+tmp <- rbind(tmp, idio.out[,, 2, 1, 3])
+apply(tmp, 2, quantile, .95)
 
 
