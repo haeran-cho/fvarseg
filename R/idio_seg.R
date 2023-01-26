@@ -64,6 +64,7 @@ idio.seg <- function(x, center = TRUE, common.out = NULL, q = NULL, d = 1,
     ll <- floor(min(common.out$G.seq[1]^(1/3), n/(2 * log(n))))
   } else {
     est.cp.common <- c()
+    K <- length(est.cp.common)
     ll <- floor(min(c(n/10, 2 * p)^(1/3), n/(2 * log(n))))
   }
   brks <- c(0, est.cp.common, n)
